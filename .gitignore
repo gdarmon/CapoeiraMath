@@ -1,0 +1,8 @@
+*.apk
+
+android-wrapper/.gradle/
+android-wrapper/app/build/
+android-wrapper/build/
+
+node_modules/
+.DS_Store

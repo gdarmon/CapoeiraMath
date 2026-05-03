@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#151313" />
+    <meta
+      name="description"
+      content="Darmon Ginga - משחק קפוארה קצר לתרגול לוח הכפל 7, 8 ו-9."
+    />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="assets/icon-192.png" />
+    <title>Darmon Ginga</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div id="app" class="shell">
+      <header class="topbar" aria-label="Darmon Ginga">
+        <button class="icon-button" id="backButton" type="button" aria-label="חזרה" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M15 6l-6 6 6 6" />
+          </svg>
+        </button>
+
+        <div class="brand" aria-label="Darmon Ginga">
+          <img class="brand-mark" src="assets/icon.svg" alt="" />
+          <div>
+            <strong>Darmon</strong>
+            <span>Ginga</span>
+          </div>
+        </div>
+
+        <div class="top-actions">
+          <button class="icon-button" id="installButton" type="button" aria-label="התקנה" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 3v11" />
+              <path d="M7 9l5 5 5-5" />
+              <path d="M5 19h14" />
+            </svg>
+          </button>
+          <button class="icon-button" id="voiceButton" type="button" aria-label="הקראה">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 10v4h4l5 4V6L8 10H4z" />
+              <path d="M17 9a4 4 0 010 6" />
+              <path d="M19.5 6.5a8 8 0 010 11" />
+            </svg>
+          </button>
+          <button class="icon-button" id="soundButton" type="button" aria-label="צלילים">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 10v4h4l5 4V6L8 10H4z" />
+              <path d="M18 9l3 3-3 3" />
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <main>
+        <section class="screen home-screen active" id="homeScreen" aria-labelledby="homeTitle">
+          <div class="hero-zone">
+            <canvas id="ambientCanvas" class="ambient-canvas" aria-hidden="true"></canvas>
+            <div class="roda-stage idle" id="homeStage" aria-hidden="true">
+              <canvas id="homeCapoeiraCanvas" class="capoeira-canvas" aria-hidden="true"></canvas>
+            </div>
+            <div class="hero-copy">
+              <p class="eyebrow">רודה יומית</p>
+              <h1 id="homeTitle">Darmon Ginga</h1>
+              <p class="hero-subtitle">7 · 8 · 9</p>
+            </div>
+          </div>
+
+          <div class="player-strip" aria-label="התקדמות">
+            <div>
+              <span class="mini-label">חגורה</span>
+              <strong id="cordLabel">לבן</strong>
+            </div>
+            <div>
+              <span class="mini-label">אנרגיה</span>
+              <strong id="xpLabel">0</strong>
+            </div>
+            <div>
+              <span class="mini-label">רצף שיא</span>
+              <strong id="bestStreakLabel">0</strong>
+            </div>
+          </div>
+
+          <div class="mode-grid" aria-label="בחירת אימון">
+            <button class="mode-card" type="button" data-mode="7">
+              <span class="mode-number">7</span>
+              <span class="mode-name">כפולות 7</span>
+            </button>
+            <button class="mode-card" type="button" data-mode="8">
+              <span class="mode-number">8</span>
+              <span class="mode-name">כפולות 8</span>
+            </button>
+            <button class="mode-card" type="button" data-mode="9">
+              <span class="mode-number">9</span>
+              <span class="mode-name">כפולות 9</span>
+            </button>
+            <button class="mode-card boss-card" type="button" data-mode="boss">
+              <span class="mode-number">789</span>
+              <span class="mode-name">בוס 7-8-9</span>
+            </button>
+          </div>
+
+          <button class="primary-action" id="startButton" type="button">
+            <span>התחל רודה</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M8 5l11 7-11 7V5z" />
+            </svg>
+          </button>
+
+        </section>
+
+        <section class="screen game-screen" id="gameScreen" aria-live="polite">
+          <div class="game-head">
+            <div class="round-meta">
+              <span id="modeLabel">רודה</span>
+              <strong id="questionCounter">1/12</strong>
+            </div>
+            <div class="streak-pill">
+              <span>רצף</span>
+              <strong id="streakLabel">0</strong>
+            </div>
+          </div>
+
+          <div class="progress-beads" id="progressBeads" aria-hidden="true"></div>
+
+          <div class="arena-wrap">
+            <canvas id="burstCanvas" class="burst-canvas" aria-hidden="true"></canvas>
+            <div class="roda-stage game-stage" id="gameStage" aria-hidden="true">
+              <canvas id="gameCapoeiraCanvas" class="capoeira-canvas" aria-hidden="true"></canvas>
+            </div>
+          </div>
+
+          <div class="question-panel">
+            <div class="question-line" id="questionText">7 × 8</div>
+            <div class="coach-hint" id="coachHint" hidden></div>
+          </div>
+
+          <div class="answer-grid" id="answerGrid" aria-label="תשובות"></div>
+
+          <div class="coach-row">
+            <button class="ghost-action" id="hintButton" type="button">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M9 18h6" />
+                <path d="M10 22h4" />
+                <path d="M8 14a6 6 0 118 0c-1 1-1.5 2-1.5 3h-5c0-1-.5-2-1.5-3z" />
+              </svg>
+              <span>רמז</span>
+            </button>
+            <button class="ghost-action" id="readButton" type="button">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 10v4h4l5 4V6L8 10H4z" />
+                <path d="M17 9a4 4 0 010 6" />
+              </svg>
+              <span>שמע</span>
+            </button>
+          </div>
+        </section>
+
+        <section class="screen finish-screen" id="finishScreen" aria-labelledby="finishTitle">
+          <div class="finish-medal" aria-hidden="true">
+            <span id="finishCord">✦</span>
+          </div>
+          <h2 id="finishTitle">רודה נסגרה</h2>
+          <div class="finish-stats">
+            <div>
+              <span class="mini-label">דיוק</span>
+              <strong id="accuracyLabel">0%</strong>
+            </div>
+            <div>
+              <span class="mini-label">רצף</span>
+              <strong id="finishStreakLabel">0</strong>
+            </div>
+            <div>
+              <span class="mini-label">אנרגיה</span>
+              <strong id="finishXpLabel">0</strong>
+            </div>
+          </div>
+          <div class="next-list" id="nextList" aria-label="תרגול הבא"></div>
+          <button class="primary-action" id="againButton" type="button">
+            <span>עוד רודה</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M21 12a9 9 0 11-2.64-6.36" />
+              <path d="M21 4v7h-7" />
+            </svg>
+          </button>
+        </section>
+      </main>
+
+      <dialog class="fact-dialog" id="factDialog">
+        <div class="fact-card">
+          <button class="icon-button close-dialog" id="closeFactButton" type="button" aria-label="סגור">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 6l12 12" />
+              <path d="M18 6L6 18" />
+            </svg>
+          </button>
+          <div class="fact-big" id="factBig">7 × 8 = 56</div>
+          <div class="fact-chant" id="factChant">שבע · שמונה · חמישים ושש</div>
+          <div class="fact-visual" id="factVisual" aria-hidden="true"></div>
+          <button class="primary-action compact" id="gotItButton" type="button">
+            <span>יאללה</span>
+          </button>
+        </div>
+      </dialog>
+
+      <dialog class="reward-dialog" id="rewardDialog">
+        <div class="reward-card">
+          <div class="reward-head">
+            <div>
+              <span class="mini-label">פרס קפוארה</span>
+              <strong id="rewardTitle">מהלך יפה</strong>
+              <div class="reward-praise" id="rewardPraise" hidden>
+                <span class="reward-praise-word" id="rewardPraiseWord"></span>
+                <span class="reward-praise-meaning" id="rewardPraiseMeaning"></span>
+              </div>
+            </div>
+            <button class="icon-button" id="skipRewardButton" type="button" aria-label="דלג">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M5 5l10 7-10 7V5z" />
+                <path d="M19 5v14" />
+              </svg>
+            </button>
+          </div>
+          <div class="reward-video-wrap">
+            <iframe
+              id="rewardFrame"
+              title="סרטון קפוארה קצר"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowfullscreen
+            ></iframe>
+          </div>
+          <div class="reward-bottom">
+            <button class="ghost-action" id="openRewardButton" type="button">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
+                <path d="M15 3h6v6" />
+                <path d="M10 14L21 3" />
+              </svg>
+              <span>YouTube</span>
+            </button>
+            <button class="primary-action compact" id="continueRewardButton" type="button">
+              <span id="rewardTimer">המשך</span>
+            </button>
+          </div>
+        </div>
+      </dialog>
+
+      <dialog class="streak-dialog" id="streakDialog">
+        <div class="streak-card">
+          <canvas id="streakCanvas" class="streak-canvas" aria-hidden="true"></canvas>
+          <div class="streak-badge" id="streakBadge">3</div>
+          <div class="streak-title" id="streakTitle">יא אלוף!</div>
+          <div class="streak-subtitle" id="streakSubtitle">רצף נקי</div>
+        </div>
+      </dialog>
+    </div>
+
+    <script src="app.js" defer></script>
+  </body>
+</html>

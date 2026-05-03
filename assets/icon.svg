@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Darmon Ginga</title>
+  <desc id="desc">A capoeira training ring with the numbers 7, 8 and 9.</desc>
+  <defs>
+    <linearGradient id="bg" x1="90" y1="42" x2="430" y2="462" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#211a17"/>
+      <stop offset="0.46" stop-color="#151313"/>
+      <stop offset="1" stop-color="#12351f"/>
+    </linearGradient>
+    <linearGradient id="ring" x1="88" y1="96" x2="426" y2="420" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#47b56c"/>
+      <stop offset="0.45" stop-color="#f5c24b"/>
+      <stop offset="1" stop-color="#e65f55"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="20" stdDeviation="18" flood-color="#000" flood-opacity="0.42"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="172" fill="none" stroke="url(#ring)" stroke-width="28" filter="url(#shadow)"/>
+  <circle cx="256" cy="256" r="126" fill="none" stroke="#fff9ee" stroke-opacity="0.16" stroke-width="10" stroke-dasharray="22 18"/>
+  <g filter="url(#shadow)">
+    <circle cx="256" cy="166" r="30" fill="#f6b37e"/>
+    <path d="M220 211c0-21 16-38 36-38s36 17 36 38v64c0 16-13 29-29 29h-14c-16 0-29-13-29-29v-64z" fill="#f5c24b"/>
+    <path d="M210 230l-58 64" stroke="#fff9ee" stroke-width="24" stroke-linecap="round"/>
+    <path d="M302 230l62 54" stroke="#fff9ee" stroke-width="24" stroke-linecap="round"/>
+    <path d="M238 298l-56 94" stroke="#fff9ee" stroke-width="26" stroke-linecap="round"/>
+    <path d="M274 298l68 82" stroke="#fff9ee" stroke-width="26" stroke-linecap="round"/>
+    <path d="M212 285h88" stroke="#47b56c" stroke-width="16" stroke-linecap="round"/>
+  </g>
+  <g font-family="Arial Rounded MT Bold, Arial, sans-serif" font-weight="900" text-anchor="middle">
+    <text x="152" y="154" font-size="72" fill="#47b56c">7</text>
+    <text x="256" y="438" font-size="76" fill="#f5c24b">8</text>
+    <text x="368" y="154" font-size="72" fill="#48c7d8">9</text>
+  </g>
+</svg>

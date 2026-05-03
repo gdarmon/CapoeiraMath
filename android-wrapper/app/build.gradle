@@ -1,0 +1,19 @@
+plugins {
+    id "com.android.application"
+}
+
+def versionProps = new Properties()
+file("../../version.properties").withInputStream { versionProps.load(it) }
+
+android {
+    namespace "com.darmon.ginga"
+    compileSdk 35
+
+    defaultConfig {
+        applicationId "com.darmon.ginga"
+        minSdk 24
+        targetSdk 35
+        versionCode versionProps['versionCode'].toInteger()
+        versionName versionProps['versionName']
+    }
+}
