@@ -1,4 +1,4 @@
-package com.darmon.ginga;
+package com.darmon.capoeria;
 
 import android.app.Activity;
 import android.content.Intent;

@@ -1,9 +1,10 @@
-const CACHE_NAME = "darmon-ginga-v21";
+const CACHE_NAME = "darmon-ginga-v22";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./styles.css",
   "./app.js",
+  "./privacy-policy.html",
   "./manifest.webmanifest",
   "./assets/abada-reward-videos.json",
   "./assets/icon.svg",
