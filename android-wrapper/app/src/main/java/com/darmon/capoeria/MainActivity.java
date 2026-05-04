@@ -97,7 +97,7 @@ public final class MainActivity extends Activity {
             return;
         }
         textToSpeech.stop();
-        textToSpeech.speak(text, TextToSpeech.QUEUE_FLUSH, null, "darmon-ginga-tts");
+        textToSpeech.speak(text, TextToSpeech.QUEUE_FLUSH, null, "darmon-capoeira-tts");
     }
 
     private final class TtsBridge {

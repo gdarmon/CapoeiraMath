@@ -1,6 +1,6 @@
 const SESSION_LENGTH = 12;
 const REWARD_SECONDS = 30;
-const STORAGE_KEY = "darmonGinga:v1";
+const STORAGE_KEY = "darmonCapoeira:v1";
 const STREAK_MILESTONES = new Set([3, 5, 8, 10, 12]);
 const PRAISE_REPEAT_WINDOW = 10;
 const BERIMBAU_REWARD_INTERVAL = 3;

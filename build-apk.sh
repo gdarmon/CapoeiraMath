@@ -37,11 +37,11 @@ ANDROID_HOME="$ANDROID_HOME" "$GRADLE" -p "$WRAPPER_DIR" assembleDebug
 APK_SRC="$WRAPPER_DIR/app/build/outputs/apk/debug/app-debug.apk"
 APK_OUT="$SCRIPT_DIR/darmon-capoeira-$VERSION_NAME.apk"
 cp "$APK_SRC" "$APK_OUT"
-cp "$APK_SRC" "$SCRIPT_DIR/DarmonGinga-debug.apk"
+cp "$APK_SRC" "$SCRIPT_DIR/DarmonCapoeira-debug.apk"
 
 echo ""
 echo "APK ready: $APK_OUT"
-echo "Stable debug copy: $SCRIPT_DIR/DarmonGinga-debug.apk"
+echo "Stable debug copy: $SCRIPT_DIR/DarmonCapoeira-debug.apk"
 echo "Version: $VERSION_NAME (code $NEW_CODE)"
 echo ""
 echo "Upload to: https://play.google.com/console -> Internal app sharing"

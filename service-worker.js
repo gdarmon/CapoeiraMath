@@ -1,4 +1,4 @@
-const CACHE_NAME = "darmon-ginga-v22";
+const CACHE_NAME = "darmon-capoeira-v23";
 const APP_SHELL = [
   "./",
   "./index.html",

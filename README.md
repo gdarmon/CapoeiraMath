@@ -1,11 +1,11 @@
-# Darmon Ginga
+# Darmon Capoeira
 
 משחק PWA קטן לאנדרויד לתרגול לוח הכפל 7, 8 ו-9 דרך קפוארה, קצב ותשובות בלחיצה.
 
 ## הפעלה מקומית
 
 ```bash
-cd /localdrive/users/giladdar/app_bazel/darmon-ginga
+cd /localdrive/users/giladdar/CapoeiraMath
 npm start
 ```
 
