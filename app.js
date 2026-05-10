@@ -111,13 +111,99 @@ function ptPraise(word, spokenWord, meaning) {
   };
 }
 
+const CORD_PALETTE = {
+  white: "#fff9ee",
+  yellow: "#f5c24b",
+  orange: "#f18345",
+  blue: "#48c7d8",
+  green: "#47b56c",
+  purple: "#9b79ff",
+  brown: "#8a5a35",
+  red: "#e65f55",
+};
+
 const CORDS = [
-  { name: "לבן", xp: 0, color: "#fff9ee" },
-  { name: "צהוב", xp: 120, color: "#f5c24b" },
-  { name: "כתום", xp: 280, color: "#f18345" },
-  { name: "ירוק", xp: 480, color: "#47b56c" },
-  { name: "כחול", xp: 740, color: "#48c7d8" },
-  { name: "סגול", xp: 1040, color: "#9b79ff" },
+  { name: "קצוות צהובים", xp: 0, colors: [CORD_PALETTE.white, CORD_PALETTE.yellow] },
+  { name: "קצה צהוב/כתום", xp: 90, colors: [CORD_PALETTE.yellow, CORD_PALETTE.orange] },
+  { name: "קצוות כתומים", xp: 190, colors: [CORD_PALETTE.white, CORD_PALETTE.orange] },
+  { name: "קצה כתום/כחול", xp: 310, colors: [CORD_PALETTE.orange, CORD_PALETTE.blue] },
+  { name: "קצוות כחולים", xp: 450, colors: [CORD_PALETTE.white, CORD_PALETTE.blue] },
+  { name: "לבן/צהוב", xp: 610, colors: [CORD_PALETTE.white, CORD_PALETTE.yellow] },
+  { name: "צהוב מלא", xp: 790, colors: [CORD_PALETTE.yellow] },
+  { name: "כתום/צהוב", xp: 990, colors: [CORD_PALETTE.orange, CORD_PALETTE.yellow] },
+  { name: "כתום מלא", xp: 1210, colors: [CORD_PALETTE.orange] },
+  { name: "כתום/כחול", xp: 1450, colors: [CORD_PALETTE.orange, CORD_PALETTE.blue] },
+  { name: "כחול מלא", xp: 1710, colors: [CORD_PALETTE.blue] },
+  { name: "כחול/ירוק", xp: 1990, colors: [CORD_PALETTE.blue, CORD_PALETTE.green] },
+  { name: "ירוק מלא", xp: 2290, colors: [CORD_PALETTE.green] },
+  { name: "ירוק/סגול", xp: 2610, colors: [CORD_PALETTE.green, CORD_PALETTE.purple] },
+  { name: "סגול מלא", xp: 2950, colors: [CORD_PALETTE.purple] },
+  { name: "חום/סגול", xp: 3310, colors: [CORD_PALETTE.brown, CORD_PALETTE.purple] },
+  { name: "חום מלא", xp: 3690, colors: [CORD_PALETTE.brown] },
+  { name: "אדום/חום", xp: 4090, colors: [CORD_PALETTE.red, CORD_PALETTE.brown] },
+  { name: "אדום מלא", xp: 4510, colors: [CORD_PALETTE.red] },
+  { name: "אדום/לבן", xp: 4950, colors: [CORD_PALETTE.red, CORD_PALETTE.white] },
+];
+
+const DEFAULT_SKIN_ID = "classic";
+const TEACHER_SKIN_UNLOCK_XP = CORDS.find((cord) => cord.name === "כחול מלא").xp;
+
+const TEACHER_SKINS = [
+  {
+    id: DEFAULT_SKIN_ID,
+    name: "לוחם דרמון",
+    role: "רגיל",
+    unlockXp: 0,
+    skinTone: "#f0b07e",
+    skinShadow: "#c9784f",
+    hair: "#37251e",
+    hairStyle: "short",
+    shirt: ["#fff3b6", "#f5c24b", "#d88c2d"],
+    pants: "#fff9ee",
+    pantsAlt: "#f4eedf",
+  },
+  {
+    id: "bananera",
+    name: "בננרה",
+    role: "בחורה",
+    unlockXp: TEACHER_SKIN_UNLOCK_XP,
+    skinTone: "#c9875c",
+    skinShadow: "#925235",
+    hair: "#24130f",
+    hairAccent: "#f5c24b",
+    hairStyle: "braid",
+    shirt: ["#fff9ee", "#47b56c", "#f5c24b"],
+    pants: "#fffaf0",
+    pantsAlt: "#f2eadb",
+  },
+  {
+    id: "bateba",
+    name: "בטהבה",
+    role: "בחורה",
+    unlockXp: TEACHER_SKIN_UNLOCK_XP,
+    skinTone: "#b66d4d",
+    skinShadow: "#7d3f2e",
+    hair: "#ff6a1f",
+    hairAccent: "#ffd04d",
+    hairStyle: "curls",
+    shirt: ["#48c7d8", "#fff9ee", "#f18345"],
+    pants: "#f8f4e7",
+    pantsAlt: "#e8dcc8",
+  },
+  {
+    id: "vesoura",
+    name: "וסורה",
+    role: "בחור",
+    unlockXp: TEACHER_SKIN_UNLOCK_XP,
+    skinTone: "#d49467",
+    skinShadow: "#9d5c3f",
+    hair: "#2b1a12",
+    hairAccent: "#6b3b22",
+    hairStyle: "dreads",
+    shirt: ["#e65f55", "#f5c24b", "#fff9ee"],
+    pants: "#fff9ee",
+    pantsAlt: "#efe7d8",
+  },
 ];
 
 const MODE_LABELS = {
@@ -271,6 +357,10 @@ function bindElements() {
     cordLabel: document.getElementById("cordLabel"),
     xpLabel: document.getElementById("xpLabel"),
     bestStreakLabel: document.getElementById("bestStreakLabel"),
+    skinPanel: document.getElementById("skinPanel"),
+    skinLabel: document.getElementById("skinLabel"),
+    skinButton: document.getElementById("skinButton"),
+    skinButtonLabel: document.getElementById("skinButtonLabel"),
     modeLabel: document.getElementById("modeLabel"),
     questionCounter: document.getElementById("questionCounter"),
     streakLabel: document.getElementById("streakLabel"),
@@ -304,6 +394,10 @@ function bindElements() {
     streakBadge: document.getElementById("streakBadge"),
     streakTitle: document.getElementById("streakTitle"),
     streakSubtitle: document.getElementById("streakSubtitle"),
+    skinDialog: document.getElementById("skinDialog"),
+    skinDialogTitle: document.getElementById("skinDialogTitle"),
+    skinGrid: document.getElementById("skinGrid"),
+    closeSkinButton: document.getElementById("closeSkinButton"),
     finishCord: document.getElementById("finishCord"),
     accuracyLabel: document.getElementById("accuracyLabel"),
     finishStreakLabel: document.getElementById("finishStreakLabel"),
@@ -360,6 +454,7 @@ function bindEvents() {
     const item = currentItem();
     if (!item || state.locked) return;
     state.usedHint = true;
+    breakCleanStreak(item.fact);
     revealCoachHint(item.fact, true);
     state.storage.facts[item.fact.key].hints += 1;
     saveStorage();
@@ -377,6 +472,8 @@ function bindEvents() {
   els.gotItButton.addEventListener("click", closeFact);
   els.skipRewardButton.addEventListener("click", finishReward);
   els.continueRewardButton.addEventListener("click", finishReward);
+  els.skinButton.addEventListener("click", () => showSkinDialog("manual"));
+  els.closeSkinButton.addEventListener("click", closeSkinDialog);
   els.openRewardButton.addEventListener("click", () => {
     if (!state.reward.video) return;
     openExternal(`https://www.youtube.com/watch?v=${state.reward.video.id}`);
@@ -531,6 +628,8 @@ function loadStorage() {
     sessions: 0,
     sound: true,
     voice: true,
+    selectedSkin: DEFAULT_SKIN_ID,
+    lastSkinPromptXp: 0,
     facts: {},
   };
 
@@ -549,6 +648,10 @@ function loadStorage() {
     const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
     if (!parsed) return defaults;
     const merged = { ...defaults, ...parsed, facts: { ...defaults.facts, ...parsed.facts } };
+    if (merged.selectedSkin === "sora") merged.selectedSkin = "vesoura";
+    const storedSkin = skinById(merged.selectedSkin);
+    merged.selectedSkin = storedSkin.unlockXp <= merged.xp ? storedSkin.id : DEFAULT_SKIN_ID;
+    merged.lastSkinPromptXp = Number(merged.lastSkinPromptXp) || 0;
     return merged;
   } catch {
     return defaults;
@@ -562,14 +665,123 @@ function saveStorage() {
 function hydrateHome() {
   const cord = getCord();
   els.cordLabel.textContent = cord.name;
-  els.cordLabel.style.color = cord.color;
+  styleCordLabel(els.cordLabel, cord);
   els.xpLabel.textContent = String(state.storage.xp);
   els.bestStreakLabel.textContent = String(state.storage.bestStreak);
   renderToggles();
+  renderSkinPanel();
 }
 
 function getCord() {
   return CORDS.reduce((best, cord) => (state.storage.xp >= cord.xp ? cord : best), CORDS[0]);
+}
+
+function cordColor(cord) {
+  return cord.colors?.[0] || CORD_PALETTE.white;
+}
+
+function cordGradient(cord) {
+  const colors = cord.colors || [cordColor(cord)];
+  if (colors.length < 2) return "";
+  const step = 100 / colors.length;
+  const stops = colors.map((color, index) => `${color} ${index * step}% ${(index + 1) * step}%`);
+  return `linear-gradient(90deg, ${stops.join(", ")})`;
+}
+
+function styleCordLabel(element, cord) {
+  const gradient = cordGradient(cord);
+  element.style.backgroundImage = gradient;
+  element.style.backgroundClip = gradient ? "text" : "";
+  element.style.webkitBackgroundClip = gradient ? "text" : "";
+  element.style.webkitTextFillColor = gradient ? "transparent" : "";
+  element.style.color = gradient ? "" : cordColor(cord);
+}
+
+function skinById(id) {
+  return TEACHER_SKINS.find((skin) => skin.id === id) || TEACHER_SKINS[0];
+}
+
+function teacherSkinsUnlocked(xp = state.storage.xp) {
+  return xp >= TEACHER_SKIN_UNLOCK_XP;
+}
+
+function activeSkin() {
+  const skin = skinById(state.storage.selectedSkin);
+  return skin.unlockXp <= state.storage.xp ? skin : skinById(DEFAULT_SKIN_ID);
+}
+
+function renderSkinPanel() {
+  const unlocked = teacherSkinsUnlocked();
+  const skin = activeSkin();
+  els.skinPanel.classList.toggle("locked", !unlocked);
+  els.skinLabel.textContent = unlocked ? skin.name : "נפתח בכחול מלא";
+  els.skinButton.disabled = !unlocked;
+  els.skinButtonLabel.textContent = unlocked ? "בחר" : "נעול";
+}
+
+function showSkinDialog(reason) {
+  if (!teacherSkinsUnlocked()) return;
+  els.skinDialogTitle.textContent = reason === "rank" ? "דרגה חדשה" : "בחר מורה";
+  renderSkinChoices();
+  if (!els.skinDialog.open) {
+    els.skinDialog.showModal();
+  }
+}
+
+function closeSkinDialog() {
+  if (els.skinDialog.open) {
+    els.skinDialog.close();
+  }
+}
+
+function renderSkinChoices() {
+  els.skinGrid.innerHTML = "";
+  const available = TEACHER_SKINS.filter(
+    (skin) => skin.id !== DEFAULT_SKIN_ID && skin.unlockXp <= state.storage.xp,
+  );
+
+  for (const skin of available) {
+    const button = document.createElement("button");
+    button.className = "skin-choice";
+    button.type = "button";
+    button.classList.toggle("selected", activeSkin().id === skin.id);
+    button.setAttribute("aria-label", `${skin.name} ${skin.role}`);
+
+    const canvas = document.createElement("canvas");
+    canvas.className = "skin-preview";
+    canvas.width = 180;
+    canvas.height = 160;
+
+    const name = document.createElement("strong");
+    name.textContent = skin.name;
+    const role = document.createElement("span");
+    role.textContent = skin.role;
+
+    button.append(canvas, name, role);
+    button.addEventListener("click", () => {
+      state.storage.selectedSkin = skin.id;
+      saveStorage();
+      renderSkinPanel();
+      renderSkinChoices();
+      closeSkinDialog();
+      tap([18, 26, 18]);
+      speak(`${skin.name} נכנס לרודה`, 0, true);
+    });
+    els.skinGrid.append(button);
+    drawSkinPreview(canvas, skin);
+  }
+}
+
+function drawSkinPreview(canvas, skin) {
+  const ctx = canvas.getContext("2d");
+  const { width, height } = canvas;
+  ctx.clearRect(0, 0, width, height);
+  const glow = ctx.createRadialGradient(width / 2, height * 0.56, 8, width / 2, height * 0.56, 84);
+  glow.addColorStop(0, "rgba(245, 194, 75, 0.26)");
+  glow.addColorStop(1, "rgba(21, 19, 19, 0)");
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, width, height);
+  drawFighter(ctx, width, height, "ginga", 0.5, performance.now(), skin);
 }
 
 function renderToggles() {
@@ -681,6 +893,8 @@ function nextQuestion() {
     return;
   }
 
+  state.currentTries = 0;
+  state.usedHint = false;
   const item = currentItem();
   els.modeLabel.textContent = MODE_LABELS[state.selectedMode];
   els.questionCounter.textContent = `${Math.min(state.questionIndex + 1, SESSION_LENGTH)}/${SESSION_LENGTH}`;
@@ -766,7 +980,11 @@ function chooseAnswer(button, answer) {
     state.correct += 1;
     state.attempts += 1;
     memory.attempts += 1;
-    if (!assisted) state.streak += 1;
+    if (assisted) {
+      state.streak = 0;
+    } else {
+      state.streak += 1;
+    }
     state.bestSessionStreak = Math.max(state.bestSessionStreak, state.streak);
     memory.correct += 1;
     memory.streak = assisted ? 0 : memory.streak + 1;
@@ -786,6 +1004,7 @@ function chooseAnswer(button, answer) {
     });
   } else if (state.currentTries === 0) {
     state.currentTries = 1;
+    breakCleanStreak(fact);
     button.classList.add("soft-wrong");
     button.disabled = true;
     revealCoachHint(fact, false);
@@ -818,6 +1037,14 @@ function chooseAnswer(button, answer) {
       });
     }, 450);
   }
+}
+
+function breakCleanStreak(fact = null) {
+  state.streak = 0;
+  if (fact && state.storage.facts[fact.key]) {
+    state.storage.facts[fact.key].streak = 0;
+  }
+  renderProgress();
 }
 
 function markAnswerButtons(correctAnswer) {
@@ -1149,14 +1376,22 @@ function renderFactVisual(fact) {
 }
 
 function finishSession() {
+  const oldCord = getCord();
   state.storage.sessions += 1;
   state.storage.xp += Math.max(10, state.correct * 3);
+  const cord = getCord();
+  const shouldOfferSkin =
+    cord.xp > oldCord.xp &&
+    cord.xp >= TEACHER_SKIN_UNLOCK_XP &&
+    state.storage.lastSkinPromptXp < cord.xp;
+  if (shouldOfferSkin) {
+    state.storage.lastSkinPromptXp = cord.xp;
+  }
   saveStorage();
   hydrateHome();
   const accuracy = state.attempts === 0 ? 0 : Math.round((state.correct / state.attempts) * 100);
-  const cord = getCord();
   els.finishCord.textContent = "✦";
-  els.finishCord.style.color = cord.color;
+  els.finishCord.style.color = cordColor(cord);
   els.accuracyLabel.textContent = `${accuracy}%`;
   els.finishStreakLabel.textContent = String(state.bestSessionStreak);
   els.finishXpLabel.textContent = String(state.storage.xp);
@@ -1165,6 +1400,9 @@ function finishSession() {
   burst(42);
   playFinish();
   speak(`סיימת רודה. דיוק ${accuracy} אחוז`);
+  if (shouldOfferSkin) {
+    window.setTimeout(() => showSkinDialog("rank"), 700);
+  }
 }
 
 function renderNextList() {
@@ -1457,7 +1695,7 @@ function drawCapoeiraStage(canvas, kind, now) {
 
   const move = stageMove(kind, now);
   drawMoveTrail(ctx, width, height, move.name, move.t, now);
-  drawFighter(ctx, width, height, move.name, move.t, now);
+  drawFighter(ctx, width, height, move.name, move.t, now, activeSkin());
 }
 
 function stageMove(kind, now) {
@@ -1675,7 +1913,7 @@ function drawMoveTrail(ctx, width, height, name, rawT, now) {
   ctx.restore();
 }
 
-function drawFighter(ctx, width, height, name, rawT, now) {
+function drawFighter(ctx, width, height, name, rawT, now, skin = activeSkin()) {
   const cx = width / 2;
   const cy = height * 0.57;
   const scale = Math.min(width, height) / 250;
@@ -1694,18 +1932,18 @@ function drawFighter(ctx, width, height, name, rawT, now) {
   ctx.fill();
   ctx.restore();
 
-  drawLimb(ctx, [pose.lHip, pose.lKnee, pose.lFoot], "#fff9ee", 18);
-  drawLimb(ctx, [pose.rHip, pose.rKnee, pose.rFoot], "#f4eedf", 18);
-  drawFoot(ctx, pose.lFoot, pose.lKnee, "#fff9ee");
-  drawFoot(ctx, pose.rFoot, pose.rKnee, "#f4eedf");
+  drawLimb(ctx, [pose.lHip, pose.lKnee, pose.lFoot], skin.pants, 18);
+  drawLimb(ctx, [pose.rHip, pose.rKnee, pose.rFoot], skin.pantsAlt || skin.pants, 18);
+  drawFoot(ctx, pose.lFoot, pose.lKnee, skin.pants);
+  drawFoot(ctx, pose.rFoot, pose.rKnee, skin.pantsAlt || skin.pants);
 
-  drawTorso(ctx, pose);
-  drawLimb(ctx, [pose.lShoulder, pose.lElbow, pose.lHand], "#f0b07e", 13);
-  drawLimb(ctx, [pose.rShoulder, pose.rElbow, pose.rHand], "#f0b07e", 13);
-  drawHand(ctx, pose.lHand);
-  drawHand(ctx, pose.rHand);
+  drawTorso(ctx, pose, skin);
+  drawLimb(ctx, [pose.lShoulder, pose.lElbow, pose.lHand], skin.skinTone, 13);
+  drawLimb(ctx, [pose.rShoulder, pose.rElbow, pose.rHand], skin.skinTone, 13);
+  drawHand(ctx, pose.lHand, skin);
+  drawHand(ctx, pose.rHand, skin);
   drawCord(ctx, pose);
-  drawHead(ctx, pose.head);
+  drawHead(ctx, pose.head, skin);
 
   ctx.restore();
 }
@@ -1894,10 +2132,11 @@ function drawLimb(ctx, points, color, width) {
   ctx.restore();
 }
 
-function drawTorso(ctx, pose) {
+function drawTorso(ctx, pose, skin) {
   const angle = Math.atan2(pose.hip.y - pose.chest.y, pose.hip.x - pose.chest.x);
   const length = distance(pose.chest, pose.hip) + 16;
   const mid = p((pose.chest.x + pose.hip.x) / 2, (pose.chest.y + pose.hip.y) / 2);
+  const shirtColors = skin.shirt || ["#fff3b6", "#f5c24b", "#d88c2d"];
   ctx.save();
   ctx.translate(mid.x, mid.y);
   ctx.rotate(angle - Math.PI / 2);
@@ -1906,9 +2145,9 @@ function drawTorso(ctx, pose) {
   ctx.roundRect(-24, -length / 2 + 2, 48, length, 17);
   ctx.fill();
   const shirt = ctx.createLinearGradient(-20, -length / 2, 20, length / 2);
-  shirt.addColorStop(0, "#fff3b6");
-  shirt.addColorStop(0.52, "#f5c24b");
-  shirt.addColorStop(1, "#d88c2d");
+  shirt.addColorStop(0, shirtColors[0]);
+  shirt.addColorStop(0.52, shirtColors[1] || shirtColors[0]);
+  shirt.addColorStop(1, shirtColors[2] || shirtColors[1] || shirtColors[0]);
   ctx.fillStyle = shirt;
   ctx.beginPath();
   ctx.roundRect(-20, -length / 2, 40, length, 16);
@@ -1919,48 +2158,175 @@ function drawTorso(ctx, pose) {
 function drawCord(ctx, pose) {
   const angle = Math.atan2(pose.rHip.y - pose.lHip.y, pose.rHip.x - pose.lHip.x);
   const mid = p((pose.lHip.x + pose.rHip.x) / 2, (pose.lHip.y + pose.rHip.y) / 2 - 2);
+  const colors = getCord().colors || [CORD_PALETTE.white];
   ctx.save();
   ctx.translate(mid.x, mid.y);
   ctx.rotate(angle);
   ctx.lineCap = "round";
   ctx.lineWidth = 6;
-  ctx.strokeStyle = "#47b56c";
+  ctx.strokeStyle = colors[0];
   ctx.beginPath();
   ctx.moveTo(-24, 0);
   ctx.lineTo(24, 0);
   ctx.stroke();
-  ctx.strokeStyle = "#48c7d8";
+  ctx.strokeStyle = colors[1] || shade(colors[0], -24);
   ctx.lineWidth = 4;
   ctx.beginPath();
-  ctx.moveTo(3, 0);
+  ctx.moveTo(colors[1] ? 0 : 3, 0);
   ctx.lineTo(28, 2);
   ctx.stroke();
   ctx.restore();
 }
 
-function drawHead(ctx, head) {
+function drawHead(ctx, head, skin) {
   ctx.save();
   ctx.fillStyle = "rgba(0,0,0,0.25)";
   ctx.beginPath();
   ctx.arc(head.x + 3, head.y + 4, 18, 0, Math.PI * 2);
   ctx.fill();
-  const skin = ctx.createRadialGradient(head.x - 5, head.y - 7, 3, head.x, head.y, 18);
-  skin.addColorStop(0, "#ffd0a1");
-  skin.addColorStop(1, "#c9784f");
-  ctx.fillStyle = skin;
+
+  drawHairBack(ctx, head, skin);
+
+  const face = ctx.createRadialGradient(head.x - 5, head.y - 7, 3, head.x, head.y, 18);
+  face.addColorStop(0, shade(skin.skinTone, 28));
+  face.addColorStop(1, skin.skinShadow || shade(skin.skinTone, -38));
+  ctx.fillStyle = face;
   ctx.beginPath();
   ctx.arc(head.x, head.y, 17, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = "#37251e";
-  ctx.beginPath();
-  ctx.arc(head.x - 3, head.y - 12, 14, Math.PI * 0.95, Math.PI * 2.08);
-  ctx.fill();
+
+  drawHairFront(ctx, head, skin);
   ctx.restore();
 }
 
-function drawHand(ctx, hand) {
+function drawHairBack(ctx, head, skin) {
+  ctx.fillStyle = skin.hair;
+  if (skin.hairStyle === "braid") {
+    ctx.beginPath();
+    ctx.ellipse(head.x + 13, head.y - 2, 7, 23, -0.18, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = skin.hairAccent;
+    ctx.beginPath();
+    ctx.arc(head.x + 15, head.y + 22, 4, 0, Math.PI * 2);
+    ctx.fill();
+    return;
+  }
+
+  if (skin.hairStyle === "curls") {
+    for (let i = 0; i < 10; i += 1) {
+      const angle = -Math.PI * 0.45 + i * 0.36;
+      ctx.beginPath();
+      ctx.arc(head.x + Math.cos(angle) * 17, head.y - 4 + Math.sin(angle) * 13, 8.8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = skin.hairAccent;
+    for (let i = 0; i < 5; i += 1) {
+      const angle = -Math.PI * 0.32 + i * 0.46;
+      ctx.beginPath();
+      ctx.arc(head.x + Math.cos(angle) * 14, head.y - 9 + Math.sin(angle) * 9, 4.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    return;
+  }
+
+  if (skin.hairStyle === "dreads") {
+    ctx.lineCap = "round";
+    ctx.strokeStyle = skin.hair;
+    ctx.lineWidth = 6;
+    for (let i = 0; i < 7; i += 1) {
+      const x = head.x - 16 + i * 5.2;
+      const sway = Math.sin(i * 1.7) * 4;
+      ctx.beginPath();
+      ctx.moveTo(x, head.y - 9);
+      ctx.quadraticCurveTo(x + sway, head.y + 5, x + sway * 0.6, head.y + 24 + (i % 3) * 4);
+      ctx.stroke();
+    }
+    ctx.strokeStyle = skin.hairAccent;
+    ctx.lineWidth = 2.5;
+    for (let i = 1; i < 7; i += 2) {
+      const x = head.x - 16 + i * 5.2;
+      ctx.beginPath();
+      ctx.moveTo(x + 1, head.y + 2);
+      ctx.lineTo(x + 3, head.y + 18);
+      ctx.stroke();
+    }
+  }
+}
+
+function drawHairFront(ctx, head, skin) {
+  ctx.fillStyle = skin.hair;
+  ctx.beginPath();
+  ctx.arc(head.x - 3, head.y - 12, 14, Math.PI * 0.95, Math.PI * 2.08);
+  ctx.fill();
+
+  if (skin.hairStyle === "headband") {
+    ctx.strokeStyle = skin.hairAccent;
+    ctx.lineWidth = 5;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(head.x - 15, head.y - 10);
+    ctx.lineTo(head.x + 14, head.y - 9);
+    ctx.stroke();
+  } else if (skin.hairStyle === "braid") {
+    ctx.fillStyle = skin.hairAccent;
+    ctx.beginPath();
+    ctx.roundRect(head.x - 12, head.y - 18, 18, 5, 4);
+    ctx.fill();
+  } else if (skin.hairStyle === "curls") {
+    ctx.fillStyle = skin.hair;
+    ctx.beginPath();
+    ctx.arc(head.x - 11, head.y - 12, 8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(head.x + 10, head.y - 14, 8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = skin.hairAccent;
+    ctx.globalAlpha = 0.9;
+    ctx.beginPath();
+    ctx.arc(head.x + 10, head.y - 15, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(head.x - 10, head.y - 12, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  } else if (skin.hairStyle === "dreads") {
+    ctx.strokeStyle = "#f5c24b";
+    ctx.lineWidth = 4;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(head.x - 15, head.y - 11);
+    ctx.lineTo(head.x + 14, head.y - 10);
+    ctx.stroke();
+
+    ctx.strokeStyle = skin.hair;
+    ctx.lineWidth = 4.5;
+    const frontLocks = [
+      [head.x - 14, head.y - 8, head.x - 23, head.y + 20],
+      [head.x - 7, head.y - 13, head.x - 12, head.y + 24],
+      [head.x + 8, head.y - 13, head.x + 12, head.y + 24],
+      [head.x + 15, head.y - 8, head.x + 24, head.y + 20],
+    ];
+    for (const [x1, y1, x2, y2] of frontLocks) {
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.quadraticCurveTo((x1 + x2) / 2, y1 + 12, x2, y2);
+      ctx.stroke();
+    }
+
+    ctx.strokeStyle = skin.hairAccent;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(head.x - 20, head.y + 8);
+    ctx.lineTo(head.x - 22, head.y + 17);
+    ctx.moveTo(head.x + 18, head.y + 8);
+    ctx.lineTo(head.x + 21, head.y + 17);
+    ctx.stroke();
+  }
+}
+
+function drawHand(ctx, hand, skin) {
   ctx.save();
-  ctx.fillStyle = "#f0b07e";
+  ctx.fillStyle = skin.skinTone;
   ctx.strokeStyle = "rgba(0,0,0,0.22)";
   ctx.lineWidth = 2;
   ctx.beginPath();

@@ -84,6 +84,16 @@
             </div>
           </div>
 
+          <div class="skin-panel" id="skinPanel" aria-label="סקין מורה">
+            <div>
+              <span class="mini-label">מורה</span>
+              <strong id="skinLabel">נפתח בכחול מלא</strong>
+            </div>
+            <button class="ghost-action skin-open-button" id="skinButton" type="button">
+              <span id="skinButtonLabel">נעול</span>
+            </button>
+          </div>
+
           <div class="mode-grid" aria-label="בחירת אימון">
             <button class="mode-card" type="button" data-mode="7">
               <span class="mode-number">7</span>
@@ -258,6 +268,20 @@
           <div class="streak-badge" id="streakBadge">3</div>
           <div class="streak-title" id="streakTitle">יא אלוף!</div>
           <div class="streak-subtitle" id="streakSubtitle">רצף נקי</div>
+        </div>
+      </dialog>
+
+      <dialog class="skin-dialog" id="skinDialog">
+        <div class="skin-card">
+          <button class="icon-button close-dialog" id="closeSkinButton" type="button" aria-label="סגור">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 6l12 12" />
+              <path d="M18 6L6 18" />
+            </svg>
+          </button>
+          <span class="mini-label">סקינים של מורים</span>
+          <h2 id="skinDialogTitle">בחר מורה</h2>
+          <div class="skin-grid" id="skinGrid"></div>
         </div>
       </dialog>
     </div>
