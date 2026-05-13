@@ -1252,7 +1252,7 @@ function showChampionshipIntro(championship) {
   state.pendingChampionship = championship;
   els.championshipDialogTitle.textContent = championship.title;
   els.championshipDialogText.textContent =
-    `${championship.questionCount} שאלות על זמן. מושלם שווה מקום 1, וכל טעות או סוף זמן מורידים מקום.`;
+    `${championship.questionCount} שאלות על זמן. המקום מחושב לפי אחוז תשובות נכונות, וסוף זמן מוריד עוד קצת.`;
   els.championshipDialogQuestions.textContent = String(championship.questionCount);
   els.championshipDialogTime.textContent = String(championship.secondsPerQuestion);
   els.championshipDialogScore.textContent = "100+";
@@ -2225,9 +2225,10 @@ function finishChampionship() {
 }
 
 function championshipPlace(correct, total, timeouts) {
-  const mistakes = total - correct;
-  if (mistakes <= 0) return 1;
-  return Math.min(50, 1 + mistakes * 3 + timeouts);
+  if (total <= 0) return 50;
+  const accuracy = correct / total;
+  const rawPlace = 1 + Math.round((1 - accuracy) * 49) + timeouts;
+  return Math.max(1, Math.min(50, rawPlace));
 }
 
 function renderChampionshipResult(championship, place, mistakes, progression, score) {
