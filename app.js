@@ -10,6 +10,8 @@ const REWARD_CLIP_TARGET = 300;
 const ABADA_REWARD_LIBRARY_PATH = "assets/abada-reward-videos.json";
 const DEFAULT_TRACK = "regular";
 const CHAMPIONSHIP_SURPRISE_INTERVAL = 3;
+const CORD_PROMOTION_ACCURACY = 70;
+const ADVANCED_CORD_PROMOTION_ACCURACY = 85;
 const SESSION_TRACKS = {
   regular: {
     label: "רודה מלאה",
@@ -911,6 +913,7 @@ function loadStorage() {
     voice: true,
     selectedSkin: DEFAULT_SKIN_ID,
     lastSkinPromptXp: 0,
+    cordStamps: 0,
     championships: {},
     facts: {},
   };
@@ -935,6 +938,7 @@ function loadStorage() {
     const storedSkin = skinById(merged.selectedSkin);
     merged.selectedSkin = storedSkin.unlockXp <= merged.xp ? storedSkin.id : DEFAULT_SKIN_ID;
     merged.lastSkinPromptXp = Number(merged.lastSkinPromptXp) || 0;
+    merged.cordStamps = Math.max(0, Number(merged.cordStamps) || 0);
     return merged;
   } catch {
     return defaults;
@@ -949,7 +953,7 @@ function hydrateHome() {
   const cord = getCord();
   els.cordLabel.textContent = cord.name;
   styleCordLabel(els.cordLabel, cord);
-  els.xpLabel.textContent = String(state.storage.xp);
+  els.xpLabel.textContent = stampProgressLabel();
   els.bestStreakLabel.textContent = String(state.storage.bestStreak);
   renderToggles();
   renderSkinPanel();
@@ -959,6 +963,51 @@ function hydrateHome() {
 
 function getCord() {
   return CORDS.reduce((best, cord) => (state.storage.xp >= cord.xp ? cord : best), CORDS[0]);
+}
+
+function cordIndexForXp(xp) {
+  return CORDS.reduce((best, cord, index) => (xp >= cord.xp ? index : best), 0);
+}
+
+function stampsRequiredForCord(cord) {
+  if (cord.xp <= cordXp("קצוות כחולים")) return 2;
+  if (cord.xp <= cordXp("כתום מלא")) return 3;
+  return 4;
+}
+
+function accuracyRequiredForCord(cord) {
+  return cord.xp >= cordXp("כחול מלא") ? ADVANCED_CORD_PROMOTION_ACCURACY : CORD_PROMOTION_ACCURACY;
+}
+
+function stampProgressLabel(stamps = state.storage.cordStamps, cord = getCord()) {
+  return `${stamps}/${stampsRequiredForCord(cord)}`;
+}
+
+function resolveCordProgression(startXp, accuracy, currentStamps = state.storage.cordStamps) {
+  const startIndex = cordIndexForXp(startXp);
+  const nextIndex = Math.min(startIndex + 1, CORDS.length - 1);
+  const from = CORDS[startIndex];
+  const requiredStamps = stampsRequiredForCord(from);
+  const requiredAccuracy = accuracyRequiredForCord(from);
+  const startingStamps = Math.min(
+    Math.max(0, Number(currentStamps) || 0),
+    Math.max(0, requiredStamps - 1),
+  );
+  const successful = accuracy > requiredAccuracy;
+  const earnedStamps = successful ? startingStamps + 1 : startingStamps;
+  const promoted = successful && earnedStamps >= requiredStamps && nextIndex > startIndex;
+  const to = CORDS[promoted ? nextIndex : startIndex];
+
+  return {
+    successful,
+    promoted,
+    from,
+    to,
+    requiredAccuracy,
+    requiredStamps,
+    stamps: promoted ? 0 : Math.min(earnedStamps, requiredStamps),
+    xp: promoted ? to.xp : startXp,
+  };
 }
 
 function cordXp(name) {
@@ -1448,7 +1497,6 @@ function chooseAnswer(button, answer) {
     state.bestSessionStreak = Math.max(state.bestSessionStreak, state.streak);
     memory.correct += 1;
     memory.streak = assisted ? 0 : memory.streak + 1;
-    state.storage.xp += assisted ? 5 : 8 + Math.min(state.streak, 5);
     state.storage.bestStreak = Math.max(state.storage.bestStreak, state.streak);
     state.answers.push({ key: fact.key, result: assisted ? "help" : "good" });
     saveStorage();
@@ -2013,21 +2061,30 @@ function finishSession() {
     return;
   }
   state.storage.sessions += 1;
-  state.storage.xp += Math.max(10, state.correct * 3);
-  const cord = getCord();
-  const unlockedSkin = newlyUnlockedTeacherSkin(state.sessionStartXp, state.storage.xp);
+  const accuracy = state.attempts === 0 ? 0 : Math.round((state.correct / state.attempts) * 100);
+  const progression = resolveCordProgression(state.sessionStartXp, accuracy);
+  state.storage.xp = progression.xp;
+  state.storage.cordStamps = progression.stamps;
+  const unlockedSkin = progression.promoted
+    ? newlyUnlockedTeacherSkin(state.sessionStartXp, state.storage.xp)
+    : null;
   if (unlockedSkin) {
     state.storage.lastSkinPromptXp = unlockedSkin.unlockXp;
   }
   saveStorage();
   hydrateHome();
-  const accuracy = state.attempts === 0 ? 0 : Math.round((state.correct / state.attempts) * 100);
+  const cord = getCord();
+  els.finishTitle.textContent = progression.promoted
+    ? "עלית חגורה!"
+    : progression.successful
+      ? "חותמת חדשה!"
+      : "רודה נסגרה";
   els.finishCord.textContent = "✦";
   els.finishCord.style.color = cordColor(cord);
   els.accuracyLabel.textContent = `${accuracy}%`;
   els.finishStreakLabel.textContent = String(state.bestSessionStreak);
-  els.finishXpLabel.textContent = String(state.storage.xp);
-  renderNextList();
+  els.finishXpLabel.textContent = stampProgressLabel();
+  renderNextList(progression);
   showScreen("finish");
   burst(42);
   playFinish();
@@ -2047,10 +2104,11 @@ function finishChampionship() {
   const score = state.championshipRun.score;
   const place = championshipPlace(correct, total, state.championshipRun.timeouts);
   const accuracy = total === 0 ? 0 : Math.round((correct / total) * 100);
-  const xpGain = correct * 2 + Math.max(12, 36 - place);
+  const progression = resolveCordProgression(oldXp, accuracy);
 
   state.storage.sessions += 1;
-  state.storage.xp += xpGain;
+  state.storage.xp = progression.xp;
+  state.storage.cordStamps = progression.stamps;
   const stats = championshipStats(championship.id);
   stats.plays += 1;
   stats.lastOfferedSession = state.storage.sessions;
@@ -2062,7 +2120,7 @@ function finishChampionship() {
   stats.lastCorrect = correct;
   stats.lastScore = score;
   stats.lastTimeouts = state.championshipRun.timeouts;
-  const unlockedSkin = newlyUnlockedTeacherSkin(oldXp, state.storage.xp);
+  const unlockedSkin = progression.promoted ? newlyUnlockedTeacherSkin(oldXp, state.storage.xp) : null;
   if (unlockedSkin) {
     state.storage.lastSkinPromptXp = unlockedSkin.unlockXp;
   }
@@ -2076,8 +2134,8 @@ function finishChampionship() {
   els.finishCord.style.color = cordColor(cord);
   els.accuracyLabel.textContent = `${accuracy}%`;
   els.finishStreakLabel.textContent = String(place);
-  els.finishXpLabel.textContent = String(state.storage.xp);
-  renderChampionshipResult(championship, place, mistakes, xpGain, score);
+  els.finishXpLabel.textContent = stampProgressLabel();
+  renderChampionshipResult(championship, place, mistakes, progression, score);
   showScreen("finish");
   burst(place === 1 ? 70 : 42);
   playFinish();
@@ -2098,13 +2156,13 @@ function championshipPlace(correct, total, timeouts) {
   return Math.min(50, 1 + mistakes * 3 + timeouts);
 }
 
-function renderChampionshipResult(championship, place, mistakes, xpGain, score) {
+function renderChampionshipResult(championship, place, mistakes, progression, score) {
   els.nextList.innerHTML = "";
   [
     `${score} נקודות`,
     `${state.correct}/${state.sessionLength} נכונות`,
     `${mistakes} טעויות`,
-    `+${xpGain} אנרגיה`,
+    progressionResultText(progression),
     `${championship.secondsPerQuestion} שניות לשאלה`,
   ].forEach((text) => {
     const chip = document.createElement("div");
@@ -2118,7 +2176,13 @@ function renderChampionshipResult(championship, place, mistakes, xpGain, score) 
   });
 }
 
-function renderNextList() {
+function progressionResultText(progression) {
+  if (progression.promoted) return `עלית ל${progression.to.name}`;
+  if (progression.successful) return `חותמת ${progression.stamps}/${progression.requiredStamps}`;
+  return `צריך מעל ${progression.requiredAccuracy}% לעלייה`;
+}
+
+function renderNextList(progression = null) {
   const weakest = FACTS.map((fact) => {
     const memory = state.storage.facts[fact.key];
     const score = memory.attempts === 0 ? -1 : memory.correct / memory.attempts - memory.misses * 0.05;
@@ -2128,6 +2192,17 @@ function renderNextList() {
     .slice(0, 3);
 
   els.nextList.innerHTML = "";
+  if (progression) {
+    const chip = document.createElement("div");
+    chip.className = "next-chip";
+    const label = document.createElement("span");
+    label.textContent = "חגורה";
+    const value = document.createElement("strong");
+    value.textContent = progressionResultText(progression);
+    chip.append(label, value);
+    els.nextList.append(chip);
+  }
+
   weakest.forEach(({ fact }) => {
     const chip = document.createElement("div");
     chip.className = "next-chip";
