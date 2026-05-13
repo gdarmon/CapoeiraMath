@@ -241,7 +241,7 @@ const CHAMPIONSHIPS = [
     id: "israel-youth",
     title: "אליפות ישראל לנוער",
     shortTitle: "ישראל לנוער",
-    minXp: cordXp("קצוות צהובים"),
+    minXp: cordXp("לבן/צהוב"),
     maxXp: cordXp("צהוב מלא") - 1,
     questionCount: 30,
     secondsPerQuestion: 15,
