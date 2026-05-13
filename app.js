@@ -1,12 +1,32 @@
-const SESSION_LENGTH = 12;
+const STANDARD_SESSION_LENGTH = 18;
+const FAST_SESSION_LENGTH = 15;
+const ANSWER_OPTION_COUNT = 6;
 const REWARD_SECONDS = 30;
 const STORAGE_KEY = "darmonCapoeira:v1";
-const STREAK_MILESTONES = new Set([3, 5, 8, 10, 12]);
+const STREAK_MILESTONES = new Set([3, 5, 8, 10, 12, 15, 18]);
 const PRAISE_REPEAT_WINDOW = 10;
-const BERIMBAU_REWARD_INTERVAL = 3;
+const INSTRUMENT_REWARD_INTERVAL = 3;
+const REWARD_CLIP_TARGET = 300;
 const ABADA_REWARD_LIBRARY_PATH = "assets/abada-reward-videos.json";
+const DEFAULT_TRACK = "regular";
+const CHAMPIONSHIP_SURPRISE_INTERVAL = 3;
+const SESSION_TRACKS = {
+  regular: {
+    label: "רודה מלאה",
+    detail: "18 שאלות · פרסי וידאו",
+    length: STANDARD_SESSION_LENGTH,
+    videos: true,
+  },
+  fast: {
+    label: "מסלול מהיר",
+    detail: "15 שאלות · בלי וידאו",
+    length: FAST_SESSION_LENGTH,
+    videos: false,
+  },
+};
 
 const HEB_NUM = new Map([
+  [0, "אפס"],
   [1, "אחד"],
   [2, "שתיים"],
   [3, "שלוש"],
@@ -17,30 +37,36 @@ const HEB_NUM = new Map([
   [8, "שמונה"],
   [9, "תשע"],
   [10, "עשר"],
+  [11, "אחת עשרה"],
+  [12, "שתים עשרה"],
+  [13, "שלוש עשרה"],
   [14, "ארבע עשרה"],
+  [15, "חמש עשרה"],
   [16, "שש עשרה"],
+  [17, "שבע עשרה"],
   [18, "שמונה עשרה"],
-  [21, "עשרים ואחת"],
-  [24, "עשרים וארבע"],
-  [27, "עשרים ושבע"],
-  [28, "עשרים ושמונה"],
-  [32, "שלושים ושתיים"],
-  [35, "שלושים וחמש"],
-  [36, "שלושים ושש"],
+  [19, "תשע עשרה"],
+  [20, "עשרים"],
+  [30, "שלושים"],
   [40, "ארבעים"],
-  [42, "ארבעים ושתיים"],
-  [45, "ארבעים וחמש"],
-  [48, "ארבעים ושמונה"],
-  [49, "ארבעים ותשע"],
-  [54, "חמישים וארבע"],
-  [56, "חמישים ושש"],
-  [63, "שישים ושלוש"],
-  [64, "שישים וארבע"],
+  [50, "חמישים"],
+  [60, "שישים"],
   [70, "שבעים"],
-  [72, "שבעים ושתיים"],
   [80, "שמונים"],
-  [81, "שמונים ואחת"],
   [90, "תשעים"],
+  [100, "מאה"],
+]);
+
+const HEB_ONES_WITH_VAV = new Map([
+  [1, "ואחת"],
+  [2, "ושתיים"],
+  [3, "ושלוש"],
+  [4, "וארבע"],
+  [5, "וחמש"],
+  [6, "ושש"],
+  [7, "ושבע"],
+  [8, "ושמונה"],
+  [9, "ותשע"],
 ]);
 
 const MOVES = ["ginga-pop", "meia", "au", "esquiva", "armada"];
@@ -146,7 +172,11 @@ const CORDS = [
 ];
 
 const DEFAULT_SKIN_ID = "classic";
-const TEACHER_SKIN_UNLOCK_XP = CORDS.find((cord) => cord.name === "כחול מלא").xp;
+const TEACHER_SKIN_UNLOCKS = {
+  bananera: cordXp("צהוב מלא"),
+  bateba: cordXp("כתום מלא"),
+  vesoura: cordXp("כחול מלא"),
+};
 
 const TEACHER_SKINS = [
   {
@@ -166,7 +196,7 @@ const TEACHER_SKINS = [
     id: "bananera",
     name: "בננרה",
     role: "בחורה",
-    unlockXp: TEACHER_SKIN_UNLOCK_XP,
+    unlockXp: TEACHER_SKIN_UNLOCKS.bananera,
     skinTone: "#c9875c",
     skinShadow: "#925235",
     hair: "#24130f",
@@ -180,7 +210,7 @@ const TEACHER_SKINS = [
     id: "bateba",
     name: "בטהבה",
     role: "בחורה",
-    unlockXp: TEACHER_SKIN_UNLOCK_XP,
+    unlockXp: TEACHER_SKIN_UNLOCKS.bateba,
     skinTone: "#b66d4d",
     skinShadow: "#7d3f2e",
     hair: "#ff6a1f",
@@ -194,7 +224,7 @@ const TEACHER_SKINS = [
     id: "vesoura",
     name: "וסורה",
     role: "בחור",
-    unlockXp: TEACHER_SKIN_UNLOCK_XP,
+    unlockXp: TEACHER_SKIN_UNLOCKS.vesoura,
     skinTone: "#d49467",
     skinShadow: "#9d5c3f",
     hair: "#2b1a12",
@@ -206,11 +236,69 @@ const TEACHER_SKINS = [
   },
 ];
 
+const CHAMPIONSHIPS = [
+  {
+    id: "israel-youth",
+    title: "אליפות ישראל לנוער",
+    shortTitle: "ישראל לנוער",
+    minXp: cordXp("קצוות צהובים"),
+    maxXp: cordXp("צהוב מלא") - 1,
+    questionCount: 30,
+    secondsPerQuestion: 15,
+    mode: "all",
+  },
+  {
+    id: "summer-cup",
+    title: "אליפות הקיץ",
+    shortTitle: "הקיץ",
+    minXp: cordXp("צהוב מלא"),
+    maxXp: cordXp("כחול מלא") - 1,
+    questionCount: 24,
+    secondsPerQuestion: 14,
+    mode: "all",
+  },
+  {
+    id: "israel-adults",
+    title: "אליפות ישראל לבוגרים",
+    shortTitle: "ישראל לבוגרים",
+    minXp: cordXp("כחול מלא"),
+    maxXp: cordXp("סגול מלא") - 1,
+    questionCount: 30,
+    secondsPerQuestion: 12,
+    mode: "all",
+  },
+  {
+    id: "acrobatics-cup",
+    title: "אליפות האקרובטיקה",
+    shortTitle: "אקרובטיקה",
+    minXp: cordXp("סגול מלא"),
+    maxXp: Infinity,
+    questionCount: 28,
+    secondsPerQuestion: 10,
+    mode: "all",
+  },
+];
+
+const DEFAULT_MODE = "boss-789";
+const INDIVIDUAL_MODES = Array.from({ length: 10 }, (_, index) => String(index + 1));
+const MODE_GROUPS = {
+  all: { label: "כל לוח הכפל", factors: INDIVIDUAL_MODES.map(Number) },
+  "boss-123": { label: "בוס 1-2-3", factors: [1, 2, 3] },
+  "boss-456": { label: "בוס 4-5-6", factors: [4, 5, 6] },
+  "boss-789": { label: "בוס 7-8-9", factors: [7, 8, 9] },
+};
 const MODE_LABELS = {
-  7: "כפולות 7",
-  8: "כפולות 8",
-  9: "כפולות 9",
-  boss: "בוס 7-8-9",
+  ...Object.fromEntries(INDIVIDUAL_MODES.map((mode) => [mode, `כפולות ${mode}`])),
+  ...Object.fromEntries(Object.entries(MODE_GROUPS).map(([mode, config]) => [mode, config.label])),
+  boss: MODE_GROUPS["boss-789"].label,
+};
+const VALID_MODES = new Set([...INDIVIDUAL_MODES, ...Object.keys(MODE_GROUPS)]);
+const INSTRUMENT_REWARD_MOVES = ["berimbau", "atabaque", "caxixi", "pandeiro"];
+const INSTRUMENT_LABELS = {
+  berimbau: "בירימבאו",
+  atabaque: "אטבאקי",
+  caxixi: "קשישי",
+  pandeiro: "פנדיירו",
 };
 
 const VIDEO_LINKS = {
@@ -224,6 +312,9 @@ const VIDEO_LINKS = {
   capoeira: "https://www.youtube.com/results?search_query=ABADA+Capoeira",
   music: "https://www.youtube.com/results?search_query=capoeira+berimbau+music+roda",
   berimbau: "https://www.youtube.com/results?search_query=capoeira+berimbau+toque",
+  atabaque: "https://www.youtube.com/results?search_query=capoeira+atabaque",
+  caxixi: "https://www.youtube.com/results?search_query=capoeira+caxixi",
+  pandeiro: "https://www.youtube.com/results?search_query=capoeira+pandeiro",
 };
 
 const REWARD_VIDEOS = {
@@ -232,7 +323,6 @@ const REWARD_VIDEOS = {
     { id: "iu9duybOELo", title: "Ginga" },
   ],
   "ginga-pop": [
-    { id: "XzXGg8H4MOE", title: "Ginga" },
     { id: "U4wOdg47fPc", title: "Capoeira rhythm" },
   ],
   au: [
@@ -268,19 +358,59 @@ const REWARD_VIDEOS = {
     { id: "9RlrbiMYs84", title: "Idalina" },
     { id: "KhsW6mY7sIk", title: "Amazonas" },
   ],
+  atabaque: [
+    { id: "0w2zlj8EKhM", title: "Atabaque Banguela rhythm" },
+    { id: "r3ZkQnqiJtk", title: "Atabaque basic variations" },
+    { id: "u6b_hNzHIt0", title: "Atabaque samba de roda" },
+    { id: "CjushG0L5us", title: "Atabaque play" },
+    { id: "dx1BE3jQR4w", title: "Atabaque axé" },
+  ],
+  caxixi: [
+    { id: "7HuFhFaPGfg", title: "Berimbau and Caxixi" },
+    { id: "qhwi0N4zu7w", title: "Caxixi in capoeira" },
+    { id: "9DLjW7UgA3A", title: "How to play Caxixi" },
+    { id: "4MYMO5KQyDo", title: "Caxixi solo" },
+    { id: "MeONyRKnOxw", title: "Como fazer Caxixi" },
+  ],
+  pandeiro: [
+    { id: "9Dw_NihXi_o", title: "Pandeiro capoeira pattern" },
+    { id: "OVLHPDTKGvo", title: "Pandeiro para iniciantes" },
+    { id: "rcxN0GZ7OJw", title: "Bateria da capoeira: pandeiro" },
+    { id: "FFPzV5104Wg", title: "Pandeiro samba de roda" },
+    { id: "MZAYwFB3_BU", title: "Samba, berimbau e pandeiro" },
+  ],
   music: [
     { id: "-SufUq4M0EY", title: "Zum Zum Zum" },
     { id: "Qy9gkL1OMMs", title: "Oi sim sim sim" },
-    { id: "U4wOdg47fPc", title: "Capoeira rhythm" },
     { id: "zxeOF192VE4", title: "Toque luna" },
     { id: "e_Zhc6AJEgk", title: "Berimbau" },
   ],
 };
 
+const INLINE_REWARD_VIDEO_IDS = new Set(
+  Object.values(REWARD_VIDEOS).flatMap((videos) => videos.map((video) => video.id)),
+);
+const CAPOEIRA_REWARD_LIMIT = Math.max(0, REWARD_CLIP_TARGET - INLINE_REWARD_VIDEO_IDS.size);
+
 const FACTS = buildFacts();
 
 const state = {
-  selectedMode: "boss",
+  selectedMode: DEFAULT_MODE,
+  selectedTrack: DEFAULT_TRACK,
+  sessionLength: SESSION_TRACKS[DEFAULT_TRACK].length,
+  sessionStartXp: 0,
+  activeChampionship: null,
+  pendingChampionship: null,
+  championshipRun: {
+    timer: null,
+    deadline: 0,
+    questionStartedAt: 0,
+    timeLeft: 0,
+    mistakes: 0,
+    timeouts: 0,
+    elapsedMs: 0,
+    score: 0,
+  },
   currentScreen: "home",
   session: [],
   retryQueue: [],
@@ -339,6 +469,7 @@ document.addEventListener("DOMContentLoaded", () => {
   registerServiceWorker();
   loadRewardLibrary();
   renderModeSelection();
+  renderTrackSelection();
   showScreen("home");
 });
 
@@ -354,6 +485,12 @@ function bindElements() {
     startButton: document.getElementById("startButton"),
     againButton: document.getElementById("againButton"),
     modeCards: Array.from(document.querySelectorAll(".mode-card")),
+    trackCards: Array.from(document.querySelectorAll(".track-card")),
+    championshipPanel: document.getElementById("championshipPanel"),
+    championshipTitle: document.getElementById("championshipTitle"),
+    championshipMeta: document.getElementById("championshipMeta"),
+    championshipBest: document.getElementById("championshipBest"),
+    championshipButton: document.getElementById("championshipButton"),
     cordLabel: document.getElementById("cordLabel"),
     xpLabel: document.getElementById("xpLabel"),
     bestStreakLabel: document.getElementById("bestStreakLabel"),
@@ -363,12 +500,19 @@ function bindElements() {
     skinButtonLabel: document.getElementById("skinButtonLabel"),
     modeLabel: document.getElementById("modeLabel"),
     questionCounter: document.getElementById("questionCounter"),
+    streakPill: document.getElementById("streakPill"),
     streakLabel: document.getElementById("streakLabel"),
+    scorePill: document.getElementById("scorePill"),
+    scoreLabel: document.getElementById("scoreLabel"),
+    timerPill: document.getElementById("timerPill"),
+    timerClock: document.getElementById("timerClock"),
+    timerLabel: document.getElementById("timerLabel"),
     progressBeads: document.getElementById("progressBeads"),
     fighter: document.getElementById("fighter"),
     questionText: document.getElementById("questionText"),
     coachHint: document.getElementById("coachHint"),
     answerGrid: document.getElementById("answerGrid"),
+    coachRow: document.getElementById("coachRow"),
     homeCapoeiraCanvas: document.getElementById("homeCapoeiraCanvas"),
     gameCapoeiraCanvas: document.getElementById("gameCapoeiraCanvas"),
     hintButton: document.getElementById("hintButton"),
@@ -389,6 +533,15 @@ function bindElements() {
     skipRewardButton: document.getElementById("skipRewardButton"),
     continueRewardButton: document.getElementById("continueRewardButton"),
     openRewardButton: document.getElementById("openRewardButton"),
+    championshipDialog: document.getElementById("championshipDialog"),
+    championshipDialogTitle: document.getElementById("championshipDialogTitle"),
+    championshipDialogText: document.getElementById("championshipDialogText"),
+    championshipDialogQuestions: document.getElementById("championshipDialogQuestions"),
+    championshipDialogTime: document.getElementById("championshipDialogTime"),
+    championshipDialogScore: document.getElementById("championshipDialogScore"),
+    championshipStartButton: document.getElementById("championshipStartButton"),
+    championshipLaterButton: document.getElementById("championshipLaterButton"),
+    closeChampionshipButton: document.getElementById("closeChampionshipButton"),
     streakDialog: document.getElementById("streakDialog"),
     streakCanvas: document.getElementById("streakCanvas"),
     streakBadge: document.getElementById("streakBadge"),
@@ -399,7 +552,9 @@ function bindElements() {
     skinGrid: document.getElementById("skinGrid"),
     closeSkinButton: document.getElementById("closeSkinButton"),
     finishCord: document.getElementById("finishCord"),
+    finishTitle: document.getElementById("finishTitle"),
     accuracyLabel: document.getElementById("accuracyLabel"),
+    finishSecondStatLabel: document.getElementById("finishSecondStatLabel"),
     finishStreakLabel: document.getElementById("finishStreakLabel"),
     finishXpLabel: document.getElementById("finishXpLabel"),
     nextList: document.getElementById("nextList"),
@@ -411,11 +566,41 @@ function bindElements() {
 function bindEvents() {
   els.modeCards.forEach((button) => {
     button.addEventListener("click", () => {
-      state.selectedMode = button.dataset.mode;
+      state.selectedMode = normalizeMode(button.dataset.mode);
       renderModeSelection();
       tap();
       playTap();
     });
+  });
+
+  els.trackCards.forEach((button) => {
+    button.addEventListener("click", () => {
+      state.selectedTrack = normalizeTrack(button.dataset.track);
+      renderTrackSelection();
+      tap();
+      playTap();
+    });
+  });
+
+  els.championshipButton.addEventListener("click", () => {
+    const championship = championshipForHome();
+    if (!championship) return;
+    unlockAudio();
+    showChampionshipIntro(championship);
+  });
+
+  els.championshipStartButton.addEventListener("click", () => {
+    const championship = state.pendingChampionship;
+    closeChampionshipIntro();
+    if (championship) {
+      startChampionship(championship.id);
+    }
+  });
+
+  els.championshipLaterButton.addEventListener("click", closeChampionshipIntro);
+  els.closeChampionshipButton.addEventListener("click", closeChampionshipIntro);
+  els.championshipDialog.addEventListener("cancel", () => {
+    state.pendingChampionship = null;
   });
 
   els.startButton.addEventListener("click", () => {
@@ -430,6 +615,8 @@ function bindEvents() {
 
   els.backButton.addEventListener("click", () => {
     stopSpeech();
+    clearChampionshipTimer();
+    state.activeChampionship = null;
     showScreen("home");
     hydrateHome();
   });
@@ -453,6 +640,11 @@ function bindEvents() {
   els.hintButton.addEventListener("click", () => {
     const item = currentItem();
     if (!item || state.locked) return;
+    if (state.activeChampionship) {
+      tap();
+      speak("באליפות אין רמזים", 0, true);
+      return;
+    }
     state.usedHint = true;
     breakCleanStreak(item.fact);
     revealCoachHint(item.fact, true);
@@ -508,29 +700,37 @@ function openExternal(url) {
 
 function applyLaunchMode() {
   const mode = new URLSearchParams(window.location.search).get("mode");
-  if (["7", "8", "9", "boss"].includes(mode)) {
-    state.selectedMode = mode;
-  }
+  state.selectedMode = normalizeMode(mode);
+}
+
+function normalizeMode(mode) {
+  if (mode === "boss") return DEFAULT_MODE;
+  return VALID_MODES.has(mode) ? mode : DEFAULT_MODE;
+}
+
+function normalizeTrack(track) {
+  return SESSION_TRACKS[track] ? track : DEFAULT_TRACK;
+}
+
+function sessionTrack() {
+  return SESSION_TRACKS[state.selectedTrack] || SESSION_TRACKS[DEFAULT_TRACK];
 }
 
 function buildFacts() {
   const facts = [];
-  for (const a of [7, 8, 9]) {
-    for (let b = 1; b <= 10; b += 1) {
-      const low = Math.min(a, b);
-      const high = Math.max(a, b);
-      const key = `${low}x${high}`;
-      if (facts.some((fact) => fact.key === key)) continue;
+  for (let a = 1; a <= 10; a += 1) {
+    for (let b = a; b <= 10; b += 1) {
+      const key = `${a}x${b}`;
       facts.push({
-        a: low,
-        b: high,
+        a,
+        b,
         key,
-        answer: low * high,
-        move: moveFor(low, high),
-        chant: `${word(low)} · ${word(high)} · ${word(low * high)}`,
-        speak: `${word(low)} כפול ${word(high)}, ${word(low * high)}`,
-        memory: memoryTipFor(low, high),
-        trick: trickFor(low, high),
+        answer: a * b,
+        move: moveFor(a, b),
+        chant: `${word(a)} · ${word(b)} · ${word(a * b)}`,
+        speak: `${word(a)} כפול ${word(b)}, ${word(a * b)}`,
+        memory: memoryTipFor(a, b),
+        trick: trickFor(a, b),
       });
     }
   }
@@ -560,6 +760,41 @@ function trickFor(a, b) {
       text: `כפול 10 מוסיף 0: ${other} → ${other * 10}`,
     };
   }
+  if (a === 2 || b === 2) {
+    const other = a === 2 ? b : a;
+    return {
+      type: "stack",
+      text: `כפול 2 זה פי שתיים: ${other} + ${other} = ${other * 2}`,
+    };
+  }
+  if (a === 3 || b === 3) {
+    const other = a === 3 ? b : a;
+    return {
+      type: "stack",
+      text: `כפול 3: ${other * 2} ועוד ${other} = ${other * 3}`,
+    };
+  }
+  if (a === 4 || b === 4) {
+    const other = a === 4 ? b : a;
+    return {
+      type: "stack",
+      text: `כפול 4: מכפילים פעמיים. ${other} → ${other * 2} → ${other * 4}`,
+    };
+  }
+  if (a === 5 || b === 5) {
+    const other = a === 5 ? b : a;
+    return {
+      type: "stack",
+      text: `כפול 5: חצי מכפול 10. ${other * 10} ÷ 2 = ${other * 5}`,
+    };
+  }
+  if (a === 6 || b === 6) {
+    const other = a === 6 ? b : a;
+    return {
+      type: "stack",
+      text: `כפול 6: 5×${other} ועוד ${other}`,
+    };
+  }
   if (a === 9 || b === 9) {
     const other = a === 9 ? b : a;
     return {
@@ -583,9 +818,12 @@ function trickFor(a, b) {
 function memoryTipFor(a, b) {
   const key = `${a}x${b}`;
   const tips = {
-    "1x7": "כפול 1 נשאר אותו מספר: 1×7 = 7.",
-    "1x8": "כפול 1 נשאר אותו מספר: 1×8 = 8.",
-    "1x9": "כפול 1 נשאר אותו מספר: 1×9 = 9.",
+    "1x1": "כפול 1 נשאר אותו מספר: 1×1 = 1.",
+    "2x2": "2×2 זה זוג ועוד זוג: 4.",
+    "3x3": "3 קבוצות של 3 הן 9.",
+    "4x4": "4×4 זה כפול פעמיים: 4→8→16.",
+    "5x5": "5×5 זה חצי מ-10×5: 50÷2 = 25.",
+    "6x6": "6×6 זה 5×6 ועוד 6: 30 ועוד 6 = 36.",
     "7x7": "7 שבועות הם 49 ימים. לכן 7×7 = 49.",
     "7x8": "טריק הרצף: 5-6-7-8. כלומר 56 = 7×8.",
     "7x9": "7×9 זה 7×10 פחות 7: 70 פחות 7 = 63.",
@@ -598,6 +836,41 @@ function memoryTipFor(a, b) {
   };
 
   if (tips[key]) return tips[key];
+
+  if (a === 1 || b === 1) {
+    const other = a === 1 ? b : a;
+    return `כפול 1 נשאר אותו מספר: ${other}.`;
+  }
+
+  if (a === 10 || b === 10) {
+    const other = a === 10 ? b : a;
+    return `כפול 10 מוסיף 0: ${other} הופך ל-${other * 10}.`;
+  }
+
+  if (a === 2 || b === 2) {
+    const other = a === 2 ? b : a;
+    return `כפול 2 זה פשוט דאבל: ${other} ועוד ${other}.`;
+  }
+
+  if (a === 3 || b === 3) {
+    const other = a === 3 ? b : a;
+    return `טריק 3: תעשה 2×${other} ואז תוסיף עוד ${other}.`;
+  }
+
+  if (a === 4 || b === 4) {
+    const other = a === 4 ? b : a;
+    return `טריק 4: מכפילים פעמיים. ${other} → ${other * 2} → ${other * 4}.`;
+  }
+
+  if (a === 5 || b === 5) {
+    const other = a === 5 ? b : a;
+    return `טריק 5: כפולות 5 נגמרות ב-0 או 5. אפשר גם חצי מ-10×${other}.`;
+  }
+
+  if (a === 6 || b === 6) {
+    const other = a === 6 ? b : a;
+    return `טריק 6: 5×${other} ועוד עוד ${other}.`;
+  }
 
   if (a === 9 || b === 9) {
     const other = a === 9 ? b : a;
@@ -618,7 +891,15 @@ function memoryTipFor(a, b) {
 }
 
 function word(number) {
-  return HEB_NUM.get(number) || String(number);
+  if (HEB_NUM.has(number)) return HEB_NUM.get(number);
+  if (number > 20 && number < 100) {
+    const tens = Math.floor(number / 10) * 10;
+    const ones = number % 10;
+    if (HEB_NUM.has(tens) && HEB_ONES_WITH_VAV.has(ones)) {
+      return `${HEB_NUM.get(tens)} ${HEB_ONES_WITH_VAV.get(ones)}`;
+    }
+  }
+  return String(number);
 }
 
 function loadStorage() {
@@ -630,6 +911,7 @@ function loadStorage() {
     voice: true,
     selectedSkin: DEFAULT_SKIN_ID,
     lastSkinPromptXp: 0,
+    championships: {},
     facts: {},
   };
 
@@ -649,6 +931,7 @@ function loadStorage() {
     if (!parsed) return defaults;
     const merged = { ...defaults, ...parsed, facts: { ...defaults.facts, ...parsed.facts } };
     if (merged.selectedSkin === "sora") merged.selectedSkin = "vesoura";
+    merged.championships = { ...defaults.championships, ...parsed.championships };
     const storedSkin = skinById(merged.selectedSkin);
     merged.selectedSkin = storedSkin.unlockXp <= merged.xp ? storedSkin.id : DEFAULT_SKIN_ID;
     merged.lastSkinPromptXp = Number(merged.lastSkinPromptXp) || 0;
@@ -670,10 +953,20 @@ function hydrateHome() {
   els.bestStreakLabel.textContent = String(state.storage.bestStreak);
   renderToggles();
   renderSkinPanel();
+  renderTrackSelection();
+  renderChampionshipPanel();
 }
 
 function getCord() {
   return CORDS.reduce((best, cord) => (state.storage.xp >= cord.xp ? cord : best), CORDS[0]);
+}
+
+function cordXp(name) {
+  return CORDS.find((cord) => cord.name === name)?.xp || 0;
+}
+
+function cordNameForXp(xp) {
+  return CORDS.reduce((best, cord) => (xp >= cord.xp ? cord : best), CORDS[0]).name;
 }
 
 function cordColor(cord) {
@@ -701,8 +994,28 @@ function skinById(id) {
   return TEACHER_SKINS.find((skin) => skin.id === id) || TEACHER_SKINS[0];
 }
 
+function unlockedTeacherSkins(xp = state.storage.xp) {
+  return TEACHER_SKINS.filter((skin) => skin.id !== DEFAULT_SKIN_ID && skin.unlockXp <= xp);
+}
+
 function teacherSkinsUnlocked(xp = state.storage.xp) {
-  return xp >= TEACHER_SKIN_UNLOCK_XP;
+  return unlockedTeacherSkins(xp).length > 0;
+}
+
+function nextTeacherSkin(xp = state.storage.xp) {
+  return TEACHER_SKINS.filter((skin) => skin.id !== DEFAULT_SKIN_ID && skin.unlockXp > xp).sort(
+    (left, right) => left.unlockXp - right.unlockXp,
+  )[0];
+}
+
+function newlyUnlockedTeacherSkin(fromXp, toXp) {
+  return TEACHER_SKINS.filter(
+    (skin) =>
+      skin.id !== DEFAULT_SKIN_ID &&
+      skin.unlockXp > fromXp &&
+      skin.unlockXp <= toXp &&
+      skin.unlockXp > state.storage.lastSkinPromptXp,
+  ).sort((left, right) => left.unlockXp - right.unlockXp)[0];
 }
 
 function activeSkin() {
@@ -713,15 +1026,18 @@ function activeSkin() {
 function renderSkinPanel() {
   const unlocked = teacherSkinsUnlocked();
   const skin = activeSkin();
+  const nextSkin = nextTeacherSkin();
   els.skinPanel.classList.toggle("locked", !unlocked);
-  els.skinLabel.textContent = unlocked ? skin.name : "נפתח בכחול מלא";
+  els.skinLabel.textContent = unlocked
+    ? skin.name
+    : `${nextSkin.name} נפתח ב${cordNameForXp(nextSkin.unlockXp)}`;
   els.skinButton.disabled = !unlocked;
   els.skinButtonLabel.textContent = unlocked ? "בחר" : "נעול";
 }
 
 function showSkinDialog(reason) {
   if (!teacherSkinsUnlocked()) return;
-  els.skinDialogTitle.textContent = reason === "rank" ? "דרגה חדשה" : "בחר מורה";
+  els.skinDialogTitle.textContent = reason === "rank" ? "מורה חדש נפתח" : "בחר מורה";
   renderSkinChoices();
   if (!els.skinDialog.open) {
     els.skinDialog.showModal();
@@ -772,6 +1088,65 @@ function renderSkinChoices() {
   }
 }
 
+function championshipStats(id) {
+  state.storage.championships[id] ||= {
+    plays: 0,
+    bestPlace: null,
+    bestCorrect: 0,
+    bestAccuracy: 0,
+    lastOfferedSession: -CHAMPIONSHIP_SURPRISE_INTERVAL,
+  };
+  return state.storage.championships[id];
+}
+
+function championshipForHome() {
+  const xp = state.storage.xp;
+  const eligible = CHAMPIONSHIPS.find((championship) => xp >= championship.minXp && xp <= championship.maxXp);
+  if (!eligible) return null;
+  const stats = championshipStats(eligible.id);
+  const neverPlayed = stats.plays === 0;
+  const dueAgain = state.storage.sessions - stats.lastOfferedSession >= CHAMPIONSHIP_SURPRISE_INTERVAL;
+  return neverPlayed || dueAgain ? eligible : null;
+}
+
+function renderChampionshipPanel() {
+  const championship = championshipForHome();
+  if (!championship) {
+    els.championshipPanel.hidden = true;
+    return;
+  }
+
+  const stats = championshipStats(championship.id);
+  els.championshipTitle.textContent = championship.title;
+  els.championshipMeta.textContent = `${championship.questionCount} שאלות · ${championship.secondsPerQuestion} שניות לשאלה`;
+  els.championshipBest.textContent = stats.bestPlace
+    ? `שיא: מקום ${stats.bestPlace} · ${stats.bestCorrect}/${championship.questionCount} · ${stats.bestScore || 0} נק׳`
+    : "שיא: עוד לא שיחקת";
+  els.championshipPanel.hidden = false;
+}
+
+function showChampionshipIntro(championship) {
+  state.pendingChampionship = championship;
+  els.championshipDialogTitle.textContent = championship.title;
+  els.championshipDialogText.textContent =
+    `${championship.questionCount} שאלות על זמן. מושלם שווה מקום 1, וכל טעות או סוף זמן מורידים מקום.`;
+  els.championshipDialogQuestions.textContent = String(championship.questionCount);
+  els.championshipDialogTime.textContent = String(championship.secondsPerQuestion);
+  els.championshipDialogScore.textContent = "100+";
+  if (!els.championshipDialog.open) {
+    els.championshipDialog.showModal();
+  }
+  tap([18, 28, 18]);
+  speak(`${championship.title}. ${championship.questionCount} שאלות על זמן`, 0, true);
+}
+
+function closeChampionshipIntro() {
+  state.pendingChampionship = null;
+  if (els.championshipDialog.open) {
+    els.championshipDialog.close();
+  }
+}
+
 function drawSkinPreview(canvas, skin) {
   const ctx = canvas.getContext("2d");
   const { width, height } = canvas;
@@ -791,7 +1166,13 @@ function renderToggles() {
 
 function renderModeSelection() {
   els.modeCards.forEach((button) => {
-    button.classList.toggle("selected", button.dataset.mode === state.selectedMode);
+    button.classList.toggle("selected", normalizeMode(button.dataset.mode) === state.selectedMode);
+  });
+}
+
+function renderTrackSelection() {
+  els.trackCards.forEach((button) => {
+    button.classList.toggle("selected", normalizeTrack(button.dataset.track) === state.selectedTrack);
   });
 }
 
@@ -801,6 +1182,14 @@ function showScreen(name) {
   els.gameScreen.classList.toggle("active", name === "game");
   els.finishScreen.classList.toggle("active", name === "finish");
   els.backButton.hidden = name === "home";
+  if (name === "home") {
+    els.finishTitle.textContent = "רודה נסגרה";
+    els.finishSecondStatLabel.textContent = "רצף";
+    els.streakPill.hidden = false;
+    els.scorePill.hidden = true;
+    els.timerPill.hidden = true;
+    els.coachRow.hidden = false;
+  }
   requestAnimationFrame(() => {
     resizeCanvas(els.homeCapoeiraCanvas);
     resizeCanvas(els.gameCapoeiraCanvas);
@@ -809,8 +1198,13 @@ function showScreen(name) {
 }
 
 function startSession(mode) {
-  state.selectedMode = mode;
-  state.session = buildSession(mode);
+  clearChampionshipTimer();
+  state.activeChampionship = null;
+  state.selectedMode = normalizeMode(mode);
+  state.selectedTrack = normalizeTrack(state.selectedTrack);
+  state.sessionLength = sessionTrack().length;
+  state.sessionStartXp = state.storage.xp;
+  state.session = buildSession(state.selectedMode, state.sessionLength);
   state.retryQueue = [];
   state.questionIndex = 0;
   state.locked = false;
@@ -829,11 +1223,51 @@ function startSession(mode) {
   nextQuestion();
 }
 
-function buildSession(mode) {
+function startChampionship(id) {
+  const championship = CHAMPIONSHIPS.find((item) => item.id === id);
+  if (!championship) return;
+  clearChampionshipTimer();
+  state.activeChampionship = championship;
+  state.selectedMode = normalizeMode(championship.mode);
+  state.selectedTrack = "championship";
+  state.sessionLength = championship.questionCount;
+  state.sessionStartXp = state.storage.xp;
+  state.session = buildSession(state.selectedMode, state.sessionLength);
+  state.retryQueue = [];
+  state.questionIndex = 0;
+  state.locked = false;
+  state.currentTries = 0;
+  state.usedHint = false;
+  state.streak = 0;
+  state.bestSessionStreak = 0;
+  state.correct = 0;
+  state.attempts = 0;
+  state.answers = [];
+  state.musicRewards = new Set();
+  state.championshipRun = {
+    timer: null,
+    deadline: 0,
+    questionStartedAt: 0,
+    timeLeft: championship.secondsPerQuestion,
+    mistakes: 0,
+    timeouts: 0,
+    elapsedMs: 0,
+    score: 0,
+  };
+  renderProgress();
+  showScreen("game");
+  tap([18, 26, 18]);
+  playStart();
+  speak(`${championship.title}. מתחילים`, 0, true);
+  nextQuestion();
+}
+
+function buildSession(mode, length = state.sessionLength) {
   const deck = deckForMode(mode);
-  const maxPerFact = Math.ceil(SESSION_LENGTH / deck.length) + 1;
+  if (!deck.length) return [];
+  const maxPerFact = Math.ceil(length / deck.length) + 1;
   const sessionCounts = new Map(deck.map((f) => [f.key, 0]));
-  const picked = deck.length <= SESSION_LENGTH ? shuffle(deck).map((fact) => ({ fact, flipped: Math.random() > 0.5 })) : [];
+  const picked = deck.length <= length ? shuffle(deck).map((fact) => ({ fact, flipped: Math.random() > 0.5 })) : [];
   picked.forEach((item) => {
     sessionCounts.set(item.fact.key, (sessionCounts.get(item.fact.key) || 0) + 1);
   });
@@ -843,7 +1277,7 @@ function buildSession(mode) {
     lastKey = picked[picked.length - 1].fact.key;
   }
 
-  for (let i = picked.length; i < SESSION_LENGTH; i += 1) {
+  for (let i = picked.length; i < length; i += 1) {
     const fact = weightedPick(deck, lastKey, sessionCounts, maxPerFact);
     picked.push({ fact, flipped: Math.random() > 0.5 });
     sessionCounts.set(fact.key, (sessionCounts.get(fact.key) || 0) + 1);
@@ -854,10 +1288,15 @@ function buildSession(mode) {
 }
 
 function deckForMode(mode) {
-  if (mode === "boss") {
+  const normalizedMode = normalizeMode(mode);
+  if (normalizedMode === "all") {
     return FACTS;
   }
-  return FACTS.filter((fact) => fact.a === Number(mode) || fact.b === Number(mode));
+  if (MODE_GROUPS[normalizedMode]) {
+    const group = MODE_GROUPS[normalizedMode].factors;
+    return FACTS.filter((fact) => group.includes(fact.a) || group.includes(fact.b));
+  }
+  return FACTS.filter((fact) => fact.a === Number(normalizedMode) || fact.b === Number(normalizedMode));
 }
 
 function weightedPick(deck, lastKey, sessionCounts, maxPerFact) {
@@ -886,6 +1325,7 @@ function weightedPick(deck, lastKey, sessionCounts, maxPerFact) {
 }
 
 function nextQuestion() {
+  clearChampionshipTimer();
   state.locked = false;
 
   if (state.questionIndex >= state.session.length) {
@@ -896,14 +1336,27 @@ function nextQuestion() {
   state.currentTries = 0;
   state.usedHint = false;
   const item = currentItem();
-  els.modeLabel.textContent = MODE_LABELS[state.selectedMode];
-  els.questionCounter.textContent = `${Math.min(state.questionIndex + 1, SESSION_LENGTH)}/${SESSION_LENGTH}`;
+  const inChampionship = Boolean(state.activeChampionship);
+  els.modeLabel.textContent = state.activeChampionship
+    ? state.activeChampionship.title
+    : MODE_LABELS[state.selectedMode] || MODE_LABELS[DEFAULT_MODE];
+  els.questionCounter.textContent = `${Math.min(state.questionIndex + 1, state.sessionLength)}/${state.sessionLength}`;
   els.streakLabel.textContent = String(state.streak);
+  els.streakPill.hidden = inChampionship;
+  els.scorePill.hidden = !inChampionship;
+  els.timerPill.hidden = !inChampionship;
+  els.coachRow.hidden = inChampionship;
+  if (inChampionship) {
+    renderChampionshipScore();
+  }
   els.questionText.textContent = formatQuestion(item);
   hideCoachHint();
   renderAnswers(item);
   renderProgress();
   speakQuestion(item, 180);
+  if (state.activeChampionship) {
+    startChampionshipTimer();
+  }
 }
 
 function currentItem() {
@@ -932,6 +1385,9 @@ function renderAnswers(item) {
 function buildOptions(fact) {
   const set = new Set([fact.answer]);
   const variants = [
+    ...FACTS.map((candidate) => candidate.answer).filter(
+      (value) => value !== fact.answer && Math.abs(value - fact.answer) <= 24,
+    ),
     fact.answer + fact.a,
     fact.answer - fact.a,
     fact.answer + fact.b,
@@ -940,15 +1396,15 @@ function buildOptions(fact) {
     fact.answer - 9,
     fact.answer + 10,
     fact.answer - 10,
-  ].filter((value) => value > 3 && value < 100);
+  ].filter((value) => value > 0 && value <= 100 && value !== fact.answer);
 
-  while (set.size < 4 && variants.length) {
+  while (set.size < ANSWER_OPTION_COUNT && variants.length) {
     const index = Math.floor(Math.random() * variants.length);
     set.add(variants.splice(index, 1)[0]);
   }
 
-  while (set.size < 4) {
-    set.add(Math.floor(Math.random() * 78) + 12);
+  while (set.size < ANSWER_OPTION_COUNT) {
+    set.add(Math.floor(Math.random() * 100) + 1);
   }
 
   return shuffle(Array.from(set));
@@ -965,6 +1421,10 @@ function shuffle(items) {
 
 function chooseAnswer(button, answer) {
   if (state.locked) return;
+  if (state.activeChampionship) {
+    chooseChampionshipAnswer(button, answer);
+    return;
+  }
   const item = currentItem();
   const fact = item.fact;
   const correct = answer === fact.answer;
@@ -1039,6 +1499,52 @@ function chooseAnswer(button, answer) {
   }
 }
 
+function chooseChampionshipAnswer(button, answer) {
+  const item = currentItem();
+  const fact = item.fact;
+  const correct = answer === fact.answer;
+  const memory = state.storage.facts[fact.key];
+
+  state.locked = true;
+  stopChampionshipTimer(true);
+  markAnswerButtons(fact.answer);
+  button.classList.add(correct ? "correct" : "wrong");
+  state.attempts += 1;
+  memory.attempts += 1;
+  memory.lastSeen = Date.now();
+
+  if (correct) {
+    state.championshipRun.score += 100 + state.championshipRun.timeLeft * 3;
+    state.correct += 1;
+    state.streak += 1;
+    state.bestSessionStreak = Math.max(state.bestSessionStreak, state.streak);
+    memory.correct += 1;
+    memory.streak += 1;
+    state.storage.bestStreak = Math.max(state.storage.bestStreak, state.streak);
+    state.answers.push({ key: fact.key, result: "good" });
+    celebrate(fact.move);
+    speak(randomPraise("clean").speak);
+  } else {
+    state.championshipRun.score = Math.max(0, state.championshipRun.score - 25);
+    state.streak = 0;
+    memory.streak = 0;
+    memory.misses += 1;
+    state.championshipRun.mistakes += 1;
+    state.answers.push({ key: fact.key, result: "try" });
+    tap([24, 34, 24]);
+    playMiss();
+    speak("טעות, ממשיכים");
+  }
+
+  saveStorage();
+  renderChampionshipScore();
+  renderProgress();
+  window.setTimeout(() => {
+    state.questionIndex += 1;
+    nextQuestion();
+  }, correct ? 520 : 760);
+}
+
 function breakCleanStreak(fact = null) {
   state.streak = 0;
   if (fact && state.storage.facts[fact.key]) {
@@ -1079,6 +1585,86 @@ function hideCoachHint() {
   els.coachHint.textContent = "";
 }
 
+function startChampionshipTimer() {
+  const championship = state.activeChampionship;
+  if (!championship) return;
+  const now = Date.now();
+  state.championshipRun.questionStartedAt = now;
+  state.championshipRun.deadline = now + championship.secondsPerQuestion * 1000;
+  state.championshipRun.timeLeft = championship.secondsPerQuestion;
+  updateChampionshipTimer();
+  state.championshipRun.timer = window.setInterval(updateChampionshipTimer, 200);
+}
+
+function updateChampionshipTimer() {
+  if (!state.activeChampionship) return;
+  const remaining = Math.max(0, Math.ceil((state.championshipRun.deadline - Date.now()) / 1000));
+  const total = state.activeChampionship.secondsPerQuestion;
+  const progress = total > 0 ? Math.max(0, Math.min(1, remaining / total)) : 0;
+  state.championshipRun.timeLeft = remaining;
+  els.timerLabel.textContent = String(remaining);
+  els.timerClock.style.setProperty("--timer-progress", `${progress * 100}%`);
+  els.timerPill.classList.toggle("danger", remaining <= 4);
+  if (remaining <= 0) {
+    handleChampionshipTimeout();
+  }
+}
+
+function renderChampionshipScore() {
+  els.scoreLabel.textContent = String(state.championshipRun.score);
+}
+
+function stopChampionshipTimer(recordElapsed) {
+  if (state.championshipRun.timer) {
+    window.clearInterval(state.championshipRun.timer);
+    state.championshipRun.timer = null;
+  }
+  if (recordElapsed && state.championshipRun.questionStartedAt) {
+    state.championshipRun.elapsedMs += Date.now() - state.championshipRun.questionStartedAt;
+  }
+  state.championshipRun.questionStartedAt = 0;
+}
+
+function clearChampionshipTimer() {
+  stopChampionshipTimer(false);
+  els.timerPill.hidden = true;
+  els.scorePill.hidden = true;
+  els.timerPill.classList.remove("danger");
+  els.timerClock.style.setProperty("--timer-progress", "100%");
+}
+
+function handleChampionshipTimeout() {
+  if (state.locked || !state.activeChampionship) return;
+  const item = currentItem();
+  if (!item) return;
+  const fact = item.fact;
+  const memory = state.storage.facts[fact.key];
+  state.locked = true;
+  stopChampionshipTimer(false);
+  state.championshipRun.elapsedMs += state.activeChampionship.secondsPerQuestion * 1000;
+  state.championshipRun.mistakes += 1;
+  state.championshipRun.timeouts += 1;
+  state.championshipRun.score = Math.max(0, state.championshipRun.score - 40);
+  state.streak = 0;
+  state.attempts += 1;
+  memory.attempts += 1;
+  memory.misses += 1;
+  memory.streak = 0;
+  memory.lastSeen = Date.now();
+  state.answers.push({ key: fact.key, result: "try" });
+  markAnswerButtons(fact.answer);
+  saveStorage();
+  renderChampionshipScore();
+  renderProgress();
+  tap([20, 30, 20]);
+  playMiss();
+  speak("נגמר הזמן, ממשיכים");
+  window.setTimeout(() => {
+    state.questionIndex += 1;
+    nextQuestion();
+  }, 820);
+}
+
 function coachHintText(fact) {
   if (fact.a === 1 || fact.b === 1) {
     return "כפול 1 הוא עוגן קל.";
@@ -1086,8 +1672,27 @@ function coachHintText(fact) {
   if (fact.a === 10 || fact.b === 10) {
     return "כפול 10 הוא עוגן קל.";
   }
+  if (fact.a === 2 || fact.b === 2) {
+    const other = fact.a === 2 ? fact.b : fact.a;
+    return `כפול 2 זה דאבל: ${other} ועוד ${other}.`;
+  }
+  if (fact.a === 3 || fact.b === 3) {
+    const other = fact.a === 3 ? fact.b : fact.a;
+    return `כפל 3 אפשר לבנות מ-2×${other} ועוד ${other}.`;
+  }
+  if (fact.a === 4 || fact.b === 4) {
+    const other = fact.a === 4 ? fact.b : fact.a;
+    return `כפל 4 זה דאבל של דאבל: ${other} → ${other * 2} → ?`;
+  }
+  if (fact.a === 5 || fact.b === 5) {
+    const other = fact.a === 5 ? fact.b : fact.a;
+    return `כפולות 5 נגמרות ב-0 או 5. חצי מ-10×${other}.`;
+  }
+  if (fact.a === 6 || fact.b === 6) {
+    const other = fact.a === 6 ? fact.b : fact.a;
+    return `כפל 6 אפשר לפרק: 5×${other} ועוד ${other}.`;
+  }
   if (fact.a === 9 || fact.b === 9) {
-    const other = fact.a === 9 ? fact.b : fact.a;
     return `בכפל 9 יש דפוס קבוע.`;
   }
   if (fact.a === 8 || fact.b === 8) {
@@ -1103,7 +1708,8 @@ function coachHintText(fact) {
 
 function renderProgress() {
   els.progressBeads.innerHTML = "";
-  for (let i = 0; i < SESSION_LENGTH; i += 1) {
+  els.progressBeads.style.gridTemplateColumns = `repeat(${state.sessionLength}, minmax(0, 1fr))`;
+  for (let i = 0; i < state.sessionLength; i += 1) {
     const bead = document.createElement("div");
     bead.className = "bead";
     if (state.answers[i]) bead.classList.add(state.answers[i].result);
@@ -1114,8 +1720,13 @@ function renderProgress() {
 
 function showStreakMoment(fact, onDone) {
   const milestone = STREAK_MILESTONES.has(state.streak);
-  const musicReward = shouldPlayMusicReward();
+  const videosEnabled = !state.activeChampionship && sessionTrack().videos;
+  const musicReward = videosEnabled && shouldPlayMusicReward();
   const afterCelebration = () => {
+    if (!videosEnabled) {
+      finishQuickReward(onDone);
+      return;
+    }
     if (musicReward) {
       showMusicReward(onDone);
       return;
@@ -1129,6 +1740,15 @@ function showStreakMoment(fact, onDone) {
   }
 
   showStreakCelebration(afterCelebration);
+}
+
+function finishQuickReward(onDone) {
+  state.reward.praise = null;
+  window.setTimeout(() => {
+    if (typeof onDone === "function") {
+      onDone();
+    }
+  }, 650);
 }
 
 function shouldPlayMusicReward() {
@@ -1163,8 +1783,14 @@ function showStreakCelebration(onDone) {
 }
 
 function streakCopy(streak) {
+  if (streak >= 18) {
+    return { title: "רודה מושלמת!", subtitle: "18 ברצף. מטורף.", speak: "רודה מושלמת" };
+  }
+  if (streak >= 15) {
+    return { title: "בלתי ניתן לעצירה!", subtitle: "15 ברצף", speak: "בלתי ניתן לעצירה" };
+  }
   if (streak >= 12) {
-    return { title: "רודה מושלמת!", subtitle: "12 ברצף. מטורף.", speak: "רודה מושלמת" };
+    return { title: "רודה אש!", subtitle: "12 ברצף", speak: "רודה אש" };
   }
   if (streak >= 10) {
     return { title: "אין דברים כאלה!", subtitle: "10 ברצף", speak: "אין דברים כאלה" };
@@ -1201,9 +1827,10 @@ function seedStreakParticles() {
 }
 
 function showReward(fact, onDone) {
-  if (shouldPlayBerimbauReward()) {
-    const video = pickRewardVideo("berimbau");
-    showVideoReward(video, `בירימבאו · ${video.title}`, onDone);
+  const instrument = nextInstrumentReward();
+  if (instrument) {
+    const video = pickRewardVideo(instrument);
+    showVideoReward(video, `${INSTRUMENT_LABELS[instrument]} · ${video.title}`, onDone);
     return;
   }
 
@@ -1217,8 +1844,13 @@ function showReward(fact, onDone) {
   showVideoReward(video, video.title, onDone);
 }
 
-function shouldPlayBerimbauReward() {
-  return state.correct > 0 && state.correct % BERIMBAU_REWARD_INTERVAL === 0;
+function nextInstrumentReward() {
+  if (state.correct === 0 || state.correct % INSTRUMENT_REWARD_INTERVAL !== 0) return null;
+  const library = state.reward.library || REWARD_VIDEOS;
+  const available = INSTRUMENT_REWARD_MOVES.filter((move) => library[move]?.length || REWARD_VIDEOS[move]?.length);
+  if (!available.length) return null;
+  const index = Math.floor(state.correct / INSTRUMENT_REWARD_INTERVAL) - 1;
+  return available[index % available.length];
 }
 
 function showVideoReward(video, title, onDone) {
@@ -1376,16 +2008,16 @@ function renderFactVisual(fact) {
 }
 
 function finishSession() {
-  const oldCord = getCord();
+  if (state.activeChampionship) {
+    finishChampionship();
+    return;
+  }
   state.storage.sessions += 1;
   state.storage.xp += Math.max(10, state.correct * 3);
   const cord = getCord();
-  const shouldOfferSkin =
-    cord.xp > oldCord.xp &&
-    cord.xp >= TEACHER_SKIN_UNLOCK_XP &&
-    state.storage.lastSkinPromptXp < cord.xp;
-  if (shouldOfferSkin) {
-    state.storage.lastSkinPromptXp = cord.xp;
+  const unlockedSkin = newlyUnlockedTeacherSkin(state.sessionStartXp, state.storage.xp);
+  if (unlockedSkin) {
+    state.storage.lastSkinPromptXp = unlockedSkin.unlockXp;
   }
   saveStorage();
   hydrateHome();
@@ -1400,9 +2032,90 @@ function finishSession() {
   burst(42);
   playFinish();
   speak(`סיימת רודה. דיוק ${accuracy} אחוז`);
-  if (shouldOfferSkin) {
+  if (unlockedSkin) {
     window.setTimeout(() => showSkinDialog("rank"), 700);
   }
+}
+
+function finishChampionship() {
+  const championship = state.activeChampionship;
+  clearChampionshipTimer();
+  const oldXp = state.sessionStartXp;
+  const total = state.sessionLength;
+  const correct = state.correct;
+  const mistakes = total - correct;
+  const score = state.championshipRun.score;
+  const place = championshipPlace(correct, total, state.championshipRun.timeouts);
+  const accuracy = total === 0 ? 0 : Math.round((correct / total) * 100);
+  const xpGain = correct * 2 + Math.max(12, 36 - place);
+
+  state.storage.sessions += 1;
+  state.storage.xp += xpGain;
+  const stats = championshipStats(championship.id);
+  stats.plays += 1;
+  stats.lastOfferedSession = state.storage.sessions;
+  stats.bestPlace = stats.bestPlace ? Math.min(stats.bestPlace, place) : place;
+  stats.bestCorrect = Math.max(stats.bestCorrect, correct);
+  stats.bestAccuracy = Math.max(stats.bestAccuracy, accuracy);
+  stats.bestScore = Math.max(stats.bestScore || 0, score);
+  stats.lastPlace = place;
+  stats.lastCorrect = correct;
+  stats.lastScore = score;
+  stats.lastTimeouts = state.championshipRun.timeouts;
+  const unlockedSkin = newlyUnlockedTeacherSkin(oldXp, state.storage.xp);
+  if (unlockedSkin) {
+    state.storage.lastSkinPromptXp = unlockedSkin.unlockXp;
+  }
+  saveStorage();
+  hydrateHome();
+
+  const cord = getCord();
+  els.finishTitle.textContent = `${championship.title} · מקום ${place}`;
+  els.finishSecondStatLabel.textContent = "מקום";
+  els.finishCord.textContent = place === 1 ? "1" : "✦";
+  els.finishCord.style.color = cordColor(cord);
+  els.accuracyLabel.textContent = `${accuracy}%`;
+  els.finishStreakLabel.textContent = String(place);
+  els.finishXpLabel.textContent = String(state.storage.xp);
+  renderChampionshipResult(championship, place, mistakes, xpGain, score);
+  showScreen("finish");
+  burst(place === 1 ? 70 : 42);
+  playFinish();
+  speak(`${championship.title}. מקום ${place}. ${correct} מתוך ${total}`);
+  state.activeChampionship = null;
+  state.selectedTrack = DEFAULT_TRACK;
+  els.timerPill.hidden = true;
+  els.scorePill.hidden = true;
+  els.coachRow.hidden = false;
+  if (unlockedSkin) {
+    window.setTimeout(() => showSkinDialog("rank"), 700);
+  }
+}
+
+function championshipPlace(correct, total, timeouts) {
+  const mistakes = total - correct;
+  if (mistakes <= 0) return 1;
+  return Math.min(50, 1 + mistakes * 3 + timeouts);
+}
+
+function renderChampionshipResult(championship, place, mistakes, xpGain, score) {
+  els.nextList.innerHTML = "";
+  [
+    `${score} נקודות`,
+    `${state.correct}/${state.sessionLength} נכונות`,
+    `${mistakes} טעויות`,
+    `+${xpGain} אנרגיה`,
+    `${championship.secondsPerQuestion} שניות לשאלה`,
+  ].forEach((text) => {
+    const chip = document.createElement("div");
+    chip.className = "next-chip championship-result-chip";
+    const label = document.createElement("span");
+    label.textContent = place === 1 ? "מקום ראשון" : championship.shortTitle;
+    const value = document.createElement("strong");
+    value.textContent = text;
+    chip.append(label, value);
+    els.nextList.append(chip);
+  });
 }
 
 function renderNextList() {
@@ -2440,7 +3153,17 @@ async function loadRewardLibrary() {
     const response = await fetch(ABADA_REWARD_LIBRARY_PATH, { cache: "no-cache" });
     if (!response.ok) return;
     const videos = await response.json();
-    const capoeira = Array.isArray(videos) ? videos.filter(isValidRewardVideo).slice(0, 150) : [];
+    const seen = new Set(INLINE_REWARD_VIDEO_IDS);
+    const capoeira = Array.isArray(videos)
+      ? videos
+          .filter(isValidRewardVideo)
+          .filter((video) => {
+            if (seen.has(video.id)) return false;
+            seen.add(video.id);
+            return true;
+          })
+          .slice(0, CAPOEIRA_REWARD_LIMIT)
+      : [];
     if (!capoeira.length) return;
     state.reward.library = {
       ...REWARD_VIDEOS,

@@ -1,7 +1,7 @@
 {
   "name": "Darmon Capoeira",
   "short_name": "Darmon",
-  "description": "משחק קפוארה קצר לתרגול לוח הכפל 7, 8 ו-9.",
+  "description": "משחק קפוארה קצר לתרגול כל לוח הכפל.",
   "lang": "he",
   "dir": "rtl",
   "start_url": "./",
@@ -35,7 +35,7 @@
     {
       "name": "רודה בוס",
       "short_name": "בוס",
-      "url": "./?mode=boss",
+      "url": "./?mode=boss-789",
       "icons": [{ "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png" }]
     }
   ]

@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#151313" />
     <meta
       name="description"
-      content="Darmon Capoeira - משחק קפוארה קצר לתרגול לוח הכפל 7, 8 ו-9."
+      content="Darmon Capoeira - משחק קפוארה קצר לתרגול כל לוח הכפל."
     />
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
@@ -65,7 +65,7 @@
             <div class="hero-copy">
               <p class="eyebrow">רודה יומית</p>
               <h1 id="homeTitle">Darmon Capoeira</h1>
-              <p class="hero-subtitle">7 · 8 · 9</p>
+              <p class="hero-subtitle">1 · 2 · 3 · 4 · 5 · 6 · 7 · 8 · 9 · 10</p>
             </div>
           </div>
 
@@ -84,7 +84,80 @@
             </div>
           </div>
 
+          <div class="skin-panel" id="skinPanel" aria-label="סקין מורה">
+            <div>
+              <span class="mini-label">מורה</span>
+              <strong id="skinLabel">נפתח בצהוב מלא</strong>
+            </div>
+            <button class="ghost-action skin-open-button" id="skinButton" type="button">
+              <span id="skinButtonLabel">נעול</span>
+            </button>
+          </div>
+
+          <div class="championship-panel" id="championshipPanel" aria-label="אירוע אליפות" hidden>
+            <div>
+              <span class="mini-label">אירוע פתע</span>
+              <strong id="championshipTitle">אליפות ישראל לנוער</strong>
+              <span id="championshipMeta">30 שאלות · 15 שניות לשאלה</span>
+              <small id="championshipBest">שיא: עוד לא שיחקת</small>
+            </div>
+            <button class="ghost-action championship-button" id="championshipButton" type="button">
+              <span>כניסה</span>
+            </button>
+          </div>
+
+          <div class="track-grid" aria-label="בחירת מסלול">
+            <button class="track-card selected" type="button" data-track="regular">
+              <strong>רודה מלאה</strong>
+              <span>18 שאלות · פרסי וידאו</span>
+            </button>
+            <button class="track-card" type="button" data-track="fast">
+              <strong>מסלול מהיר</strong>
+              <span>15 שאלות · בלי וידאו</span>
+            </button>
+          </div>
+
           <div class="mode-grid" aria-label="בחירת אימון">
+            <button class="mode-card all-card" type="button" data-mode="all">
+              <span class="mode-number">1-10</span>
+              <span class="mode-name">כל לוח הכפל</span>
+            </button>
+            <button class="mode-card boss-card" type="button" data-mode="boss-123">
+              <span class="mode-number">123</span>
+              <span class="mode-name">בוס 1-2-3</span>
+            </button>
+            <button class="mode-card boss-card" type="button" data-mode="boss-456">
+              <span class="mode-number">456</span>
+              <span class="mode-name">בוס 4-5-6</span>
+            </button>
+            <button class="mode-card boss-card" type="button" data-mode="boss-789">
+              <span class="mode-number">789</span>
+              <span class="mode-name">בוס 7-8-9</span>
+            </button>
+            <button class="mode-card" type="button" data-mode="1">
+              <span class="mode-number">1</span>
+              <span class="mode-name">כפולות 1</span>
+            </button>
+            <button class="mode-card" type="button" data-mode="2">
+              <span class="mode-number">2</span>
+              <span class="mode-name">כפולות 2</span>
+            </button>
+            <button class="mode-card" type="button" data-mode="3">
+              <span class="mode-number">3</span>
+              <span class="mode-name">כפולות 3</span>
+            </button>
+            <button class="mode-card" type="button" data-mode="4">
+              <span class="mode-number">4</span>
+              <span class="mode-name">כפולות 4</span>
+            </button>
+            <button class="mode-card" type="button" data-mode="5">
+              <span class="mode-number">5</span>
+              <span class="mode-name">כפולות 5</span>
+            </button>
+            <button class="mode-card" type="button" data-mode="6">
+              <span class="mode-number">6</span>
+              <span class="mode-name">כפולות 6</span>
+            </button>
             <button class="mode-card" type="button" data-mode="7">
               <span class="mode-number">7</span>
               <span class="mode-name">כפולות 7</span>
@@ -97,9 +170,9 @@
               <span class="mode-number">9</span>
               <span class="mode-name">כפולות 9</span>
             </button>
-            <button class="mode-card boss-card" type="button" data-mode="boss">
-              <span class="mode-number">789</span>
-              <span class="mode-name">בוס 7-8-9</span>
+            <button class="mode-card" type="button" data-mode="10">
+              <span class="mode-number">10</span>
+              <span class="mode-name">כפולות 10</span>
             </button>
           </div>
 
@@ -120,11 +193,21 @@
           <div class="game-head">
             <div class="round-meta">
               <span id="modeLabel">רודה</span>
-              <strong id="questionCounter">1/12</strong>
+              <strong id="questionCounter">1/18</strong>
             </div>
-            <div class="streak-pill">
+            <div class="streak-pill" id="streakPill">
               <span>רצף</span>
               <strong id="streakLabel">0</strong>
+            </div>
+            <div class="score-pill" id="scorePill" hidden>
+              <span>ניקוד</span>
+              <strong id="scoreLabel">0</strong>
+            </div>
+            <div class="timer-pill" id="timerPill" hidden>
+              <span>זמן</span>
+              <div class="timer-clock" id="timerClock">
+                <strong id="timerLabel">15</strong>
+              </div>
             </div>
           </div>
 
@@ -144,7 +227,7 @@
 
           <div class="answer-grid" id="answerGrid" aria-label="תשובות"></div>
 
-          <div class="coach-row">
+          <div class="coach-row" id="coachRow">
             <button class="ghost-action" id="hintButton" type="button">
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M9 18h6" />
@@ -174,7 +257,7 @@
               <strong id="accuracyLabel">0%</strong>
             </div>
             <div>
-              <span class="mini-label">רצף</span>
+              <span class="mini-label" id="finishSecondStatLabel">רצף</span>
               <strong id="finishStreakLabel">0</strong>
             </div>
             <div>
@@ -252,12 +335,67 @@
         </div>
       </dialog>
 
+      <dialog class="championship-dialog" id="championshipDialog">
+        <div class="championship-card">
+          <button class="icon-button close-dialog" id="closeChampionshipButton" type="button" aria-label="סגור">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 6l12 12" />
+              <path d="M18 6L6 18" />
+            </svg>
+          </button>
+          <div class="championship-animation" aria-hidden="true">
+            <div class="championship-ring ring-one"></div>
+            <div class="championship-ring ring-two"></div>
+            <div class="championship-flash">1</div>
+          </div>
+          <span class="mini-label">אירוע פתע</span>
+          <h2 id="championshipDialogTitle">אליפות ישראל לנוער</h2>
+          <p id="championshipDialogText">
+            30 שאלות על זמן. מושלם שווה מקום 1, וכל טעות או סוף זמן מורידים מקום.
+          </p>
+          <div class="championship-rules">
+            <div>
+              <strong id="championshipDialogQuestions">30</strong>
+              <span>שאלות</span>
+            </div>
+            <div>
+              <strong id="championshipDialogTime">15</strong>
+              <span>שניות</span>
+            </div>
+            <div>
+              <strong id="championshipDialogScore">100</strong>
+              <span>נק׳ לתשובה</span>
+            </div>
+          </div>
+          <button class="primary-action" id="championshipStartButton" type="button">
+            <span>מתחילים תחרות</span>
+          </button>
+          <button class="ghost-action compact-later" id="championshipLaterButton" type="button">
+            <span>לא עכשיו</span>
+          </button>
+        </div>
+      </dialog>
+
       <dialog class="streak-dialog" id="streakDialog">
         <div class="streak-card">
           <canvas id="streakCanvas" class="streak-canvas" aria-hidden="true"></canvas>
           <div class="streak-badge" id="streakBadge">3</div>
           <div class="streak-title" id="streakTitle">יא אלוף!</div>
           <div class="streak-subtitle" id="streakSubtitle">רצף נקי</div>
+        </div>
+      </dialog>
+
+      <dialog class="skin-dialog" id="skinDialog">
+        <div class="skin-card">
+          <button class="icon-button close-dialog" id="closeSkinButton" type="button" aria-label="סגור">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 6l12 12" />
+              <path d="M18 6L6 18" />
+            </svg>
+          </button>
+          <span class="mini-label">סקינים של מורים</span>
+          <h2 id="skinDialogTitle">בחר מורה</h2>
+          <div class="skin-grid" id="skinGrid"></div>
         </div>
       </dialog>
     </div>
