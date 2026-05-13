@@ -779,8 +779,8 @@ h1 {
 
 .reset-action {
   min-height: 44px;
-  width: fit-content;
-  margin: 10px auto 0;
+  width: 100%;
+  margin: -2px 0 12px;
   padding: 0 14px;
   border-color: rgba(230, 95, 85, 0.34);
   background: rgba(230, 95, 85, 0.1);
@@ -1790,12 +1790,12 @@ h2 {
     grid-template-areas:
       "hero progress"
       "hero skin"
+      "hero reset"
       "hero championship"
       "hero tracks"
       "hero modes"
       "hero start"
-      "hero privacy"
-      "hero reset";
+      "hero privacy";
     align-items: start;
     gap: 12px 20px;
   }
@@ -1878,8 +1878,8 @@ h2 {
 
   .reset-action {
     grid-area: reset;
-    justify-self: center;
     margin-top: 0;
+    margin-bottom: 0;
   }
 
   .game-screen.active {
