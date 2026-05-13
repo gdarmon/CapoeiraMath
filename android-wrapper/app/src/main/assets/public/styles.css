@@ -777,6 +777,22 @@ h1 {
   text-underline-offset: 3px;
 }
 
+.reset-action {
+  min-height: 44px;
+  width: fit-content;
+  margin: 10px auto 0;
+  padding: 0 14px;
+  border-color: rgba(230, 95, 85, 0.34);
+  background: rgba(230, 95, 85, 0.1);
+  color: #ffd5cf;
+  font-size: 0.84rem;
+}
+
+.reset-action svg {
+  width: 19px;
+  height: 19px;
+}
+
 .game-head {
   display: grid;
   grid-template-columns: 1fr auto auto;
@@ -1778,7 +1794,8 @@ h2 {
       "hero tracks"
       "hero modes"
       "hero start"
-      "hero privacy";
+      "hero privacy"
+      "hero reset";
     align-items: start;
     gap: 12px 20px;
   }
@@ -1856,6 +1873,12 @@ h2 {
 
   .privacy-link {
     grid-area: privacy;
+    margin-top: 0;
+  }
+
+  .reset-action {
+    grid-area: reset;
+    justify-self: center;
     margin-top: 0;
   }
 

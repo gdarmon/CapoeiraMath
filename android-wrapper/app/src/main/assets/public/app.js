@@ -485,6 +485,7 @@ function bindElements() {
     voiceButton: document.getElementById("voiceButton"),
     soundButton: document.getElementById("soundButton"),
     startButton: document.getElementById("startButton"),
+    resetProgressButton: document.getElementById("resetProgressButton"),
     againButton: document.getElementById("againButton"),
     modeCards: Array.from(document.querySelectorAll(".mode-card")),
     trackCards: Array.from(document.querySelectorAll(".track-card")),
@@ -614,6 +615,8 @@ function bindEvents() {
     unlockAudio();
     startSession(state.selectedMode);
   });
+
+  els.resetProgressButton.addEventListener("click", confirmResetProgress);
 
   els.backButton.addEventListener("click", () => {
     stopSpeech();
@@ -947,6 +950,77 @@ function loadStorage() {
 
 function saveStorage() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state.storage));
+}
+
+function confirmResetProgress() {
+  const confirmed = window.confirm(
+    "לאפס את כל החגורות והנתונים?\n\nזה ימחק את כל ההיסטוריה, החותמות, התחרויות, הרצפים והגישה לסקינים. אי אפשר לבטל את הפעולה.",
+  );
+  if (!confirmed) return;
+  resetProgress();
+}
+
+function resetProgress() {
+  stopSpeech();
+  clearRewardTimers();
+  clearChampionshipTimer();
+  window.clearTimeout(state.streakFx.timer);
+  state.streakFx.timer = null;
+
+  [els.rewardDialog, els.factDialog, els.championshipDialog, els.skinDialog, els.streakDialog].forEach(
+    (dialog) => {
+      if (dialog?.open) dialog.close();
+    },
+  );
+
+  localStorage.removeItem(STORAGE_KEY);
+  state.storage = loadStorage();
+  state.selectedMode = DEFAULT_MODE;
+  state.selectedTrack = DEFAULT_TRACK;
+  state.sessionLength = SESSION_TRACKS[DEFAULT_TRACK].length;
+  state.sessionStartXp = 0;
+  state.activeChampionship = null;
+  state.pendingChampionship = null;
+  state.championshipRun = {
+    timer: null,
+    deadline: 0,
+    questionStartedAt: 0,
+    timeLeft: 0,
+    mistakes: 0,
+    timeouts: 0,
+    elapsedMs: 0,
+    score: 0,
+  };
+  state.session = [];
+  state.retryQueue = [];
+  state.questionIndex = 0;
+  state.locked = false;
+  state.currentTries = 0;
+  state.usedHint = false;
+  state.streak = 0;
+  state.bestSessionStreak = 0;
+  state.correct = 0;
+  state.attempts = 0;
+  state.answers = [];
+  state.musicRewards = new Set();
+  state.praiseHistory = { clean: [], assisted: [] };
+  state.lastRewardVideoId = {};
+  state.visual.activeMove = null;
+  state.fact.onDone = null;
+  state.streakFx.particles = [];
+  state.reward.video = null;
+  state.reward.onDone = null;
+  state.reward.praise = null;
+  state.reward.secondsLeft = REWARD_SECONDS;
+  state.rewardFrame.src = "about:blank";
+  renderRewardPraise(null);
+  renderModeSelection();
+  renderTrackSelection();
+  showScreen("home");
+  hydrateHome();
+  renderProgress();
+  tap([18, 24, 18]);
+  speak("המשחק אופס. מתחילים מחדש", 0, true);
 }
 
 function hydrateHome() {
