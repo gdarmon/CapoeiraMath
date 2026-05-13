@@ -1664,6 +1664,230 @@ h2 {
   }
 }
 
+@media (min-width: 900px) {
+  :root {
+    --ring-size: min(520px, 42vw);
+  }
+
+  body {
+    min-height: 100vh;
+    background:
+      linear-gradient(135deg, rgba(245, 194, 75, 0.09) 0 18%, transparent 18% 100%),
+      linear-gradient(215deg, rgba(71, 181, 108, 0.11) 0 22%, transparent 22% 100%),
+      radial-gradient(circle at 50% 0%, rgba(72, 199, 216, 0.1), transparent 36%),
+      linear-gradient(145deg, #151313 0%, #211a17 48%, #101611 100%);
+  }
+
+  .shell {
+    width: min(100%, 1180px);
+    padding: max(16px, env(safe-area-inset-top)) 28px max(24px, env(safe-area-inset-bottom));
+  }
+
+  .topbar {
+    height: 64px;
+    grid-template-columns: 56px 1fr auto;
+    margin-bottom: 10px;
+  }
+
+  .brand {
+    justify-content: center;
+  }
+
+  .home-screen.active {
+    display: grid;
+    grid-template-columns: minmax(390px, 1fr) minmax(430px, 520px);
+    grid-template-areas:
+      "hero progress"
+      "hero skin"
+      "hero championship"
+      "hero tracks"
+      "hero modes"
+      "hero start"
+      "hero privacy";
+    align-items: start;
+    gap: 12px 20px;
+  }
+
+  .home-screen .hero-zone {
+    grid-area: hero;
+    min-height: min(760px, calc(100vh - 112px));
+    position: sticky;
+    top: 82px;
+    border-radius: var(--radius);
+  }
+
+  .home-screen .hero-copy {
+    inset-block-start: 40px;
+  }
+
+  .home-screen h1 {
+    font-size: clamp(3rem, 5.2vw, 5.3rem);
+  }
+
+  .home-screen .hero-subtitle {
+    font-size: clamp(1.45rem, 2.2vw, 2.25rem);
+  }
+
+  .home-screen .roda-stage {
+    margin-block-start: 88px;
+  }
+
+  .player-strip {
+    grid-area: progress;
+    margin: 0;
+  }
+
+  .skin-panel {
+    grid-area: skin;
+    margin: 0;
+  }
+
+  .championship-panel {
+    grid-area: championship;
+    margin: 0;
+  }
+
+  .track-grid {
+    grid-area: tracks;
+    margin: 0;
+  }
+
+  .mode-grid {
+    grid-area: modes;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    margin: 0;
+  }
+
+  .mode-card {
+    min-height: 84px;
+  }
+
+  .all-card {
+    grid-column: span 2;
+  }
+
+  .boss-card .mode-number,
+  .all-card .mode-number {
+    font-size: 1.35rem;
+  }
+
+  .home-screen > .primary-action {
+    grid-area: start;
+    margin-top: 2px;
+  }
+
+  .privacy-link {
+    grid-area: privacy;
+    margin-top: 0;
+  }
+
+  .game-screen.active {
+    display: grid;
+    grid-template-columns: minmax(410px, 1fr) minmax(430px, 520px);
+    grid-template-areas:
+      "head head"
+      "progress progress"
+      "arena question"
+      "arena answers"
+      "arena coach";
+    align-items: start;
+    gap: 12px 22px;
+  }
+
+  .game-head {
+    grid-area: head;
+    margin: 0;
+  }
+
+  .progress-beads {
+    grid-area: progress;
+    margin: 0;
+  }
+
+  .arena-wrap {
+    grid-area: arena;
+    min-height: min(620px, calc(100vh - 164px));
+    position: sticky;
+    top: 86px;
+  }
+
+  .game-stage {
+    --ring-size: min(560px, 45vw, 68vh);
+  }
+
+  .question-panel {
+    grid-area: question;
+    margin: 0;
+    padding-block: 18px 16px;
+  }
+
+  .question-line {
+    font-size: clamp(4rem, 6.4vw, 5.8rem);
+  }
+
+  .answer-grid {
+    grid-area: answers;
+    gap: 10px;
+  }
+
+  .answer-button {
+    min-height: 96px;
+    font-size: 2.55rem;
+  }
+
+  .coach-row {
+    grid-area: coach;
+    margin-top: 0;
+  }
+
+  .finish-screen.active {
+    width: min(100%, 640px);
+    margin-inline: auto;
+    padding-top: 58px;
+  }
+
+  .reward-dialog {
+    width: min(92vw, 860px);
+  }
+
+  .reward-card {
+    grid-template-columns: minmax(280px, 360px) minmax(320px, 1fr);
+    grid-template-areas:
+      "video head"
+      "video bottom";
+    align-items: start;
+    gap: 16px;
+  }
+
+  .reward-head {
+    grid-area: head;
+  }
+
+  .reward-video-wrap {
+    grid-area: video;
+    max-height: min(72vh, 640px);
+  }
+
+  .reward-bottom {
+    grid-area: bottom;
+    align-self: end;
+  }
+}
+
+@media (min-width: 900px) and (max-height: 720px) {
+  .home-screen .hero-zone {
+    min-height: 590px;
+    position: relative;
+    top: auto;
+  }
+
+  .arena-wrap {
+    min-height: 470px;
+    position: relative;
+    top: auto;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
