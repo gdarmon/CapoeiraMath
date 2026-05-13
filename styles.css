@@ -1654,7 +1654,82 @@ h2 {
   }
 }
 
-@media (min-height: 760px) {
+@media (max-width: 899px) {
+  :root {
+    --ring-size: clamp(252px, 74vw, 304px);
+  }
+
+  .shell {
+    padding-bottom: max(104px, env(safe-area-inset-bottom));
+  }
+
+  .topbar {
+    height: 52px;
+  }
+
+  .brand-mark {
+    width: 32px;
+    height: 32px;
+  }
+
+  .hero-zone {
+    min-height: clamp(300px, 49vh, 358px);
+  }
+
+  .hero-copy {
+    inset-block-start: 16px;
+  }
+
+  h1 {
+    font-size: clamp(2rem, 8.8vw, 2.45rem);
+  }
+
+  .hero-subtitle {
+    font-size: clamp(1.1rem, 5.2vw, 1.42rem);
+  }
+
+  .roda-stage {
+    margin-block-start: 48px;
+  }
+
+  .player-strip > div,
+  .finish-stats > div {
+    min-height: 62px;
+  }
+
+  .skin-panel {
+    min-height: 58px;
+  }
+
+  .track-card {
+    min-height: 62px;
+  }
+
+  .mode-card {
+    min-height: 76px;
+  }
+
+  .mode-number {
+    font-size: 1.9rem;
+  }
+
+  .boss-card .mode-number,
+  .all-card .mode-number {
+    font-size: 1.35rem;
+  }
+
+  .home-screen.active > .primary-action {
+    position: fixed;
+    right: auto;
+    bottom: max(12px, env(safe-area-inset-bottom));
+    left: 50%;
+    z-index: 40;
+    width: min(calc(100% - 28px), 492px);
+    transform: translateX(-50%);
+  }
+}
+
+@media (min-height: 760px) and (min-width: 900px) {
   .hero-zone {
     min-height: 382px;
   }
@@ -1773,7 +1848,10 @@ h2 {
 
   .home-screen > .primary-action {
     grid-area: start;
+    position: static;
+    width: 100%;
     margin-top: 2px;
+    transform: none;
   }
 
   .privacy-link {

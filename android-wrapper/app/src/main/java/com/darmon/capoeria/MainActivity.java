@@ -2,10 +2,15 @@ package com.darmon.capoeria;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.graphics.Insets;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.speech.tts.TextToSpeech;
 import android.view.View;
+import android.view.ViewGroup;
+import android.view.Window;
+import android.view.WindowInsets;
 import android.webkit.JavascriptInterface;
 import android.webkit.MimeTypeMap;
 import android.webkit.WebResourceRequest;
@@ -13,6 +18,7 @@ import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.FrameLayout;
 import android.widget.Toast;
 import java.io.IOException;
 import java.io.InputStream;
@@ -21,6 +27,8 @@ import java.util.Locale;
 public final class MainActivity extends Activity {
     private static final String ORIGIN = "https://darmon.local";
     private static final String ASSET_ROOT = "public/";
+    private static final int NIGHT = 0xFF151313;
+    private FrameLayout rootView;
     private WebView webView;
     private TextToSpeech textToSpeech;
     private boolean ttsReady;
@@ -30,8 +38,14 @@ public final class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        configureSystemBars();
+
+        rootView = new FrameLayout(this);
+        rootView.setBackgroundColor(NIGHT);
+        applySystemInsets(rootView);
+
         webView = new WebView(this);
-        webView.setBackgroundColor(0xFF151313);
+        webView.setBackgroundColor(NIGHT);
         webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
 
         WebSettings settings = webView.getSettings();
@@ -65,8 +79,35 @@ public final class MainActivity extends Activity {
         webView.addJavascriptInterface(new TtsBridge(), "AndroidTts");
         webView.addJavascriptInterface(new LinkBridge(), "AndroidLinks");
         webView.setWebViewClient(new LocalAssetClient());
-        setContentView(webView);
+        rootView.addView(
+                webView,
+                new FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT));
+        setContentView(rootView);
         webView.loadUrl(ORIGIN + "/");
+    }
+
+    private void configureSystemBars() {
+        Window window = getWindow();
+        window.setStatusBarColor(NIGHT);
+        window.setNavigationBarColor(NIGHT);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            window.setDecorFitsSystemWindows(false);
+        }
+    }
+
+    private void applySystemInsets(View view) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            view.setOnApplyWindowInsetsListener(
+                    (target, insets) -> {
+                        Insets bars = insets.getInsets(WindowInsets.Type.systemBars());
+                        target.setPadding(bars.left, bars.top, bars.right, bars.bottom);
+                        return WindowInsets.CONSUMED;
+                    });
+            return;
+        }
+        view.setFitsSystemWindows(true);
     }
 
     @Override
