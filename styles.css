@@ -666,9 +666,22 @@ h1 {
 
 .mode-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
   margin-block: 8px 12px;
+}
+
+.boss-mode-grid,
+.table-mode-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.boss-mode-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.table-mode-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
 .mode-card {
@@ -732,12 +745,24 @@ h1 {
 }
 
 .all-card {
-  grid-column: 1 / -1;
   min-height: 76px;
 }
 
 .all-card .mode-number {
   font-size: 2rem;
+}
+
+.table-card {
+  min-height: 76px;
+}
+
+.table-card .mode-number {
+  font-size: 1.75rem;
+}
+
+.table-card .mode-name {
+  font-size: 0.68rem;
+  line-height: 1.05;
 }
 
 .primary-action,
@@ -1729,6 +1754,18 @@ h2 {
     font-size: 1.9rem;
   }
 
+  .table-card {
+    min-height: 70px;
+  }
+
+  .table-card .mode-number {
+    font-size: 1.65rem;
+  }
+
+  .table-card .mode-name {
+    font-size: 0.64rem;
+  }
+
   .boss-card .mode-number,
   .all-card .mode-number {
     font-size: 1.35rem;
@@ -1846,7 +1883,6 @@ h2 {
 
   .mode-grid {
     grid-area: modes;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
     margin: 0;
   }
 
@@ -1855,7 +1891,7 @@ h2 {
   }
 
   .all-card {
-    grid-column: span 2;
+    min-height: 76px;
   }
 
   .boss-card .mode-number,

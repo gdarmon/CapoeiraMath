@@ -1,4 +1,4 @@
-const CACHE_NAME = "darmon-capoeira-v38";
+const CACHE_NAME = "darmon-capoeira-v39";
 const APP_SHELL = [
   "./",
   "./index.html",
