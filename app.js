@@ -3958,7 +3958,7 @@ function drawBurst() {
 function registerServiceWorker() {
   if (!("serviceWorker" in navigator)) return;
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./service-worker.js?v=42").catch(() => {});
+    navigator.serviceWorker.register("./service-worker.js?v=43").catch(() => {});
   });
 }
 

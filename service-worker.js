@@ -1,11 +1,11 @@
-const CACHE_NAME = "darmon-capoeira-v42";
+const CACHE_NAME = "darmon-capoeira-v43";
 const APP_SHELL = [
   "./",
   "./index.html",
-  "./styles.css?v=42",
-  "./app.js?v=42",
+  "./styles.css?v=43",
+  "./app.js?v=43",
   "./privacy-policy.html",
-  "./manifest.webmanifest?v=42",
+  "./manifest.webmanifest?v=43",
   "./assets/abada-reward-videos.json",
   "./assets/icon.svg",
   "./assets/icon-192.png",
