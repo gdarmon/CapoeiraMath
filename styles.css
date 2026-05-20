@@ -664,14 +664,62 @@ h1 {
   line-height: 1.1;
 }
 
+.subject-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-block: 8px 12px;
+}
+
+.subject-card {
+  min-height: 70px;
+  border: 2px solid rgba(255, 249, 238, 0.12);
+  border-radius: var(--radius);
+  background:
+    linear-gradient(145deg, rgba(71, 181, 108, 0.12), rgba(255, 249, 238, 0.05)),
+    var(--night-2);
+  color: var(--ink);
+  display: grid;
+  align-content: center;
+  gap: 5px;
+  padding: 9px 6px;
+  text-align: center;
+}
+
+.subject-card.selected {
+  border-color: var(--leaf);
+  background:
+    linear-gradient(145deg, rgba(71, 181, 108, 0.24), rgba(72, 199, 216, 0.12)),
+    var(--night-2);
+}
+
+.subject-card strong {
+  font-size: 0.82rem;
+  line-height: 1.05;
+}
+
+.subject-card span {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 850;
+  line-height: 1.1;
+}
+
 .mode-grid {
   display: grid;
   gap: 8px;
   margin-block: 8px 12px;
 }
 
+.mode-panel {
+  display: grid;
+  gap: 8px;
+}
+
 .boss-mode-grid,
-.table-mode-grid {
+.table-mode-grid,
+.advanced-mode-grid,
+.fraction-mode-grid {
   display: grid;
   gap: 8px;
 }
@@ -682,6 +730,11 @@ h1 {
 
 .table-mode-grid {
   grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.advanced-mode-grid,
+.fraction-mode-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .mode-card {
@@ -763,6 +816,14 @@ h1 {
 .table-card .mode-name {
   font-size: 0.68rem;
   line-height: 1.05;
+}
+
+.operation-card .mode-number {
+  color: var(--aqua);
+}
+
+.fraction-mode-grid .operation-card .mode-number {
+  color: var(--leaf);
 }
 
 .primary-action,
@@ -1011,6 +1072,11 @@ h1 {
   line-height: 1;
   font-weight: 950;
   color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.question-line.long-question {
+  font-size: clamp(1.9rem, 8.5vw, 3rem);
 }
 
 .coach-hint {
@@ -1044,6 +1110,12 @@ h1 {
   line-height: 1;
   box-shadow: 0 16px 28px rgba(0, 0, 0, 0.25);
   direction: ltr;
+  overflow-wrap: anywhere;
+}
+
+.answer-button.long-answer {
+  font-size: 1.5rem;
+  line-height: 1.08;
 }
 
 .answer-button.correct {
@@ -1238,6 +1310,13 @@ h2 {
   height: 48px;
   background: rgba(245, 194, 75, 0.9);
   color: #241600;
+}
+
+.visual-step {
+  width: auto;
+  min-width: 52px;
+  padding-inline: 10px;
+  direction: ltr;
 }
 
 .visual-nine {
@@ -1686,6 +1765,19 @@ h2 {
     padding-inline: 6px;
   }
 
+  .subject-card {
+    min-height: 62px;
+    padding-inline: 4px;
+  }
+
+  .subject-card strong {
+    font-size: 0.72rem;
+  }
+
+  .subject-card span {
+    font-size: 0.6rem;
+  }
+
   .mode-card {
     min-height: 78px;
   }
@@ -1743,6 +1835,10 @@ h2 {
   }
 
   .track-card {
+    min-height: 62px;
+  }
+
+  .subject-card {
     min-height: 62px;
   }
 
@@ -1829,6 +1925,7 @@ h2 {
       "hero skin"
       "hero reset"
       "hero championship"
+      "hero subjects"
       "hero tracks"
       "hero modes"
       "hero start"
@@ -1878,6 +1975,11 @@ h2 {
 
   .track-grid {
     grid-area: tracks;
+    margin: 0;
+  }
+
+  .subject-grid {
+    grid-area: subjects;
     margin: 0;
   }
 

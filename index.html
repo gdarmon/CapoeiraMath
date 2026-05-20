@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#151313" />
     <meta
       name="description"
-      content="Darmon Capoeira - משחק קפוארה קצר לתרגול כל לוח הכפל."
+      content="Darmon Capoeira - משחק קפוארה קצר לתרגול לוח הכפל, פעולות חשבון, שברים ועשרוניים."
     />
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
@@ -65,7 +65,7 @@
             <div class="hero-copy">
               <p class="eyebrow">רודה יומית</p>
               <h1 id="homeTitle">Darmon Capoeira</h1>
-              <p class="hero-subtitle">1 · 2 · 3 · 4 · 5 · 6 · 7 · 8 · 9 · 10</p>
+              <p class="hero-subtitle" id="homeSubtitle">1 · 2 · 3 · 4 · 5 · 6 · 7 · 8 · 9 · 10</p>
             </div>
           </div>
 
@@ -128,65 +128,128 @@
             </button>
           </div>
 
-          <div class="mode-grid" aria-label="בחירת אימון">
-            <button class="mode-card all-card" type="button" data-mode="all">
-              <span class="mode-number">1-10</span>
-              <span class="mode-name">כל לוח הכפל</span>
+          <div class="subject-grid" aria-label="בחירת תחום">
+            <button class="subject-card selected" type="button" data-subject="multiplication">
+              <strong>לוח הכפל</strong>
+              <span>בוסים וכפולות</span>
             </button>
-            <div class="boss-mode-grid" aria-label="בחירת בוס">
-              <button class="mode-card boss-card" type="button" data-mode="boss-123">
-                <span class="mode-number">123</span>
-                <span class="mode-name">בוס 1-2-3</span>
+            <button class="subject-card" type="button" data-subject="arithmetic">
+              <strong>פעולות עד מיליון</strong>
+              <span>חיבור, חיסור, כפל וחילוק</span>
+            </button>
+            <button class="subject-card" type="button" data-subject="fractions">
+              <strong>שברים ועשרוניים</strong>
+              <span>השוואה, המרה וחיבור</span>
+            </button>
+          </div>
+
+          <div class="mode-grid" aria-label="בחירת אימון">
+            <div class="mode-panel" data-subject-panel="multiplication">
+              <button class="mode-card all-card" type="button" data-mode="all">
+                <span class="mode-number">1-10</span>
+                <span class="mode-name">כל לוח הכפל</span>
               </button>
-              <button class="mode-card boss-card" type="button" data-mode="boss-456">
-                <span class="mode-number">456</span>
-                <span class="mode-name">בוס 4-5-6</span>
+              <div class="boss-mode-grid" aria-label="בחירת בוס">
+                <button class="mode-card boss-card" type="button" data-mode="boss-123">
+                  <span class="mode-number">123</span>
+                  <span class="mode-name">בוס 1-2-3</span>
+                </button>
+                <button class="mode-card boss-card" type="button" data-mode="boss-456">
+                  <span class="mode-number">456</span>
+                  <span class="mode-name">בוס 4-5-6</span>
+                </button>
+                <button class="mode-card boss-card" type="button" data-mode="boss-789">
+                  <span class="mode-number">789</span>
+                  <span class="mode-name">בוס 7-8-9</span>
+                </button>
+              </div>
+              <div class="table-mode-grid" aria-label="בחירת כפולה">
+                <button class="mode-card table-card" type="button" data-mode="1">
+                  <span class="mode-number">1</span>
+                  <span class="mode-name">כפולות 1</span>
+                </button>
+                <button class="mode-card table-card" type="button" data-mode="2">
+                  <span class="mode-number">2</span>
+                  <span class="mode-name">כפולות 2</span>
+                </button>
+                <button class="mode-card table-card" type="button" data-mode="3">
+                  <span class="mode-number">3</span>
+                  <span class="mode-name">כפולות 3</span>
+                </button>
+                <button class="mode-card table-card" type="button" data-mode="4">
+                  <span class="mode-number">4</span>
+                  <span class="mode-name">כפולות 4</span>
+                </button>
+                <button class="mode-card table-card" type="button" data-mode="5">
+                  <span class="mode-number">5</span>
+                  <span class="mode-name">כפולות 5</span>
+                </button>
+                <button class="mode-card table-card" type="button" data-mode="6">
+                  <span class="mode-number">6</span>
+                  <span class="mode-name">כפולות 6</span>
+                </button>
+                <button class="mode-card table-card" type="button" data-mode="7">
+                  <span class="mode-number">7</span>
+                  <span class="mode-name">כפולות 7</span>
+                </button>
+                <button class="mode-card table-card" type="button" data-mode="8">
+                  <span class="mode-number">8</span>
+                  <span class="mode-name">כפולות 8</span>
+                </button>
+                <button class="mode-card table-card" type="button" data-mode="9">
+                  <span class="mode-number">9</span>
+                  <span class="mode-name">כפולות 9</span>
+                </button>
+                <button class="mode-card table-card" type="button" data-mode="10">
+                  <span class="mode-number">10</span>
+                  <span class="mode-name">כפולות 10</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="mode-panel advanced-mode-grid" data-subject-panel="arithmetic" hidden>
+              <button class="mode-card operation-card" type="button" data-mode="arith-add">
+                <span class="mode-number">+</span>
+                <span class="mode-name">חיבור עד מיליון</span>
               </button>
-              <button class="mode-card boss-card" type="button" data-mode="boss-789">
-                <span class="mode-number">789</span>
-                <span class="mode-name">בוס 7-8-9</span>
+              <button class="mode-card operation-card" type="button" data-mode="arith-sub">
+                <span class="mode-number">−</span>
+                <span class="mode-name">חיסור עד מיליון</span>
+              </button>
+              <button class="mode-card operation-card" type="button" data-mode="arith-mul">
+                <span class="mode-number">×</span>
+                <span class="mode-name">כפל ארוך</span>
+              </button>
+              <button class="mode-card operation-card" type="button" data-mode="arith-div">
+                <span class="mode-number">÷</span>
+                <span class="mode-name">חילוק ארוך</span>
               </button>
             </div>
-            <div class="table-mode-grid" aria-label="בחירת כפולה">
-              <button class="mode-card table-card" type="button" data-mode="1">
-                <span class="mode-number">1</span>
-                <span class="mode-name">כפולות 1</span>
+
+            <div class="mode-panel fraction-mode-grid" data-subject-panel="fractions" hidden>
+              <button class="mode-card operation-card" type="button" data-mode="frac-compare">
+                <span class="mode-number">?</span>
+                <span class="mode-name">השוואת שברים</span>
               </button>
-              <button class="mode-card table-card" type="button" data-mode="2">
-                <span class="mode-number">2</span>
-                <span class="mode-name">כפולות 2</span>
+              <button class="mode-card operation-card" type="button" data-mode="frac-add">
+                <span class="mode-number">+</span>
+                <span class="mode-name">חיבור שברים</span>
               </button>
-              <button class="mode-card table-card" type="button" data-mode="3">
-                <span class="mode-number">3</span>
-                <span class="mode-name">כפולות 3</span>
+              <button class="mode-card operation-card" type="button" data-mode="frac-sub">
+                <span class="mode-number">−</span>
+                <span class="mode-name">חיסור שברים</span>
               </button>
-              <button class="mode-card table-card" type="button" data-mode="4">
-                <span class="mode-number">4</span>
-                <span class="mode-name">כפולות 4</span>
+              <button class="mode-card operation-card" type="button" data-mode="frac-mixed">
+                <span class="mode-number">1½</span>
+                <span class="mode-name">שבר למספר מעורב</span>
               </button>
-              <button class="mode-card table-card" type="button" data-mode="5">
-                <span class="mode-number">5</span>
-                <span class="mode-name">כפולות 5</span>
+              <button class="mode-card operation-card" type="button" data-mode="frac-decimal">
+                <span class="mode-number">0.5</span>
+                <span class="mode-name">שבר לעשרוני</span>
               </button>
-              <button class="mode-card table-card" type="button" data-mode="6">
-                <span class="mode-number">6</span>
-                <span class="mode-name">כפולות 6</span>
-              </button>
-              <button class="mode-card table-card" type="button" data-mode="7">
-                <span class="mode-number">7</span>
-                <span class="mode-name">כפולות 7</span>
-              </button>
-              <button class="mode-card table-card" type="button" data-mode="8">
-                <span class="mode-number">8</span>
-                <span class="mode-name">כפולות 8</span>
-              </button>
-              <button class="mode-card table-card" type="button" data-mode="9">
-                <span class="mode-number">9</span>
-                <span class="mode-name">כפולות 9</span>
-              </button>
-              <button class="mode-card table-card" type="button" data-mode="10">
-                <span class="mode-number">10</span>
-                <span class="mode-name">כפולות 10</span>
+              <button class="mode-card operation-card" type="button" data-mode="dec-addsub">
+                <span class="mode-number">0.1</span>
+                <span class="mode-name">חיבור וחיסור עשרוניים</span>
               </button>
             </div>
           </div>

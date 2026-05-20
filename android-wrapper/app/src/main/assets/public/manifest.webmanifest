@@ -1,7 +1,7 @@
 {
   "name": "Darmon Capoeira",
   "short_name": "Darmon",
-  "description": "משחק קפוארה קצר לתרגול כל לוח הכפל.",
+  "description": "משחק קפוארה קצר לתרגול לוח הכפל, פעולות חשבון, שברים ועשרוניים.",
   "lang": "he",
   "dir": "rtl",
   "start_url": "./",

@@ -281,6 +281,7 @@ const CHAMPIONSHIPS = [
   },
 ];
 
+const DEFAULT_SUBJECT = "multiplication";
 const DEFAULT_MODE = "boss-789";
 const INDIVIDUAL_MODES = Array.from({ length: 10 }, (_, index) => String(index + 1));
 const MODE_GROUPS = {
@@ -289,12 +290,54 @@ const MODE_GROUPS = {
   "boss-456": { label: "בוס 4-5-6", factors: [4, 5, 6] },
   "boss-789": { label: "בוס 7-8-9", factors: [7, 8, 9] },
 };
+const ARITHMETIC_MODES = {
+  "arith-add": { label: "חיבור עד מיליון" },
+  "arith-sub": { label: "חיסור עד מיליון" },
+  "arith-mul": { label: "כפל ארוך" },
+  "arith-div": { label: "חילוק ארוך" },
+};
+const FRACTION_MODES = {
+  "frac-compare": { label: "השוואת שברים" },
+  "frac-add": { label: "חיבור שברים" },
+  "frac-sub": { label: "חיסור שברים" },
+  "frac-mixed": { label: "שבר למספר מעורב" },
+  "frac-decimal": { label: "שבר לעשרוני" },
+  "dec-addsub": { label: "חיבור וחיסור עשרוניים" },
+};
+const SUBJECTS = {
+  multiplication: {
+    label: "לוח הכפל",
+    hero: "1 · 2 · 3 · 4 · 5 · 6 · 7 · 8 · 9 · 10",
+  },
+  arithmetic: {
+    label: "פעולות עד מיליון",
+    hero: "+ · − · × · ÷ · עד מיליון",
+  },
+  fractions: {
+    label: "שברים ועשרוניים",
+    hero: "1/2 · 0.5 · > · +",
+  },
+};
+const SUBJECT_DEFAULT_MODES = {
+  multiplication: DEFAULT_MODE,
+  arithmetic: "arith-add",
+  fractions: "frac-compare",
+};
+const MODE_SUBJECTS = {
+  ...Object.fromEntries(INDIVIDUAL_MODES.map((mode) => [mode, "multiplication"])),
+  ...Object.fromEntries(Object.keys(MODE_GROUPS).map((mode) => [mode, "multiplication"])),
+  ...Object.fromEntries(Object.keys(ARITHMETIC_MODES).map((mode) => [mode, "arithmetic"])),
+  ...Object.fromEntries(Object.keys(FRACTION_MODES).map((mode) => [mode, "fractions"])),
+};
 const MODE_LABELS = {
   ...Object.fromEntries(INDIVIDUAL_MODES.map((mode) => [mode, `כפולות ${mode}`])),
   ...Object.fromEntries(Object.entries(MODE_GROUPS).map(([mode, config]) => [mode, config.label])),
+  ...Object.fromEntries(Object.entries(ARITHMETIC_MODES).map(([mode, config]) => [mode, config.label])),
+  ...Object.fromEntries(Object.entries(FRACTION_MODES).map(([mode, config]) => [mode, config.label])),
   boss: MODE_GROUPS["boss-789"].label,
 };
-const VALID_MODES = new Set([...INDIVIDUAL_MODES, ...Object.keys(MODE_GROUPS)]);
+const GENERATED_MODES = new Set([...Object.keys(ARITHMETIC_MODES), ...Object.keys(FRACTION_MODES)]);
+const VALID_MODES = new Set([...INDIVIDUAL_MODES, ...Object.keys(MODE_GROUPS), ...GENERATED_MODES]);
 const INSTRUMENT_REWARD_MOVES = ["berimbau", "atabaque", "caxixi", "pandeiro"];
 const INSTRUMENT_LABELS = {
   berimbau: "בירימבאו",
@@ -397,6 +440,7 @@ const CAPOEIRA_REWARD_LIMIT = Math.max(0, REWARD_CLIP_TARGET - INLINE_REWARD_VID
 const FACTS = buildFacts();
 
 const state = {
+  selectedSubject: DEFAULT_SUBJECT,
   selectedMode: DEFAULT_MODE,
   selectedTrack: DEFAULT_TRACK,
   sessionLength: SESSION_TRACKS[DEFAULT_TRACK].length,
@@ -470,6 +514,7 @@ document.addEventListener("DOMContentLoaded", () => {
   setupCanvases();
   registerServiceWorker();
   loadRewardLibrary();
+  renderSubjectSelection();
   renderModeSelection();
   renderTrackSelection();
   showScreen("home");
@@ -487,7 +532,10 @@ function bindElements() {
     startButton: document.getElementById("startButton"),
     resetProgressButton: document.getElementById("resetProgressButton"),
     againButton: document.getElementById("againButton"),
+    homeSubtitle: document.getElementById("homeSubtitle"),
     modeCards: Array.from(document.querySelectorAll(".mode-card")),
+    modePanels: Array.from(document.querySelectorAll("[data-subject-panel]")),
+    subjectButtons: Array.from(document.querySelectorAll(".subject-card")),
     trackCards: Array.from(document.querySelectorAll(".track-card")),
     championshipPanel: document.getElementById("championshipPanel"),
     championshipTitle: document.getElementById("championshipTitle"),
@@ -567,9 +615,23 @@ function bindElements() {
 }
 
 function bindEvents() {
+  els.subjectButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const subject = normalizeSubject(button.dataset.subject);
+      state.selectedSubject = subject;
+      state.selectedMode = SUBJECT_DEFAULT_MODES[subject];
+      renderSubjectSelection();
+      renderModeSelection();
+      tap();
+      playTap();
+    });
+  });
+
   els.modeCards.forEach((button) => {
     button.addEventListener("click", () => {
       state.selectedMode = normalizeMode(button.dataset.mode);
+      state.selectedSubject = modeSubject(state.selectedMode);
+      renderSubjectSelection();
       renderModeSelection();
       tap();
       playTap();
@@ -653,7 +715,7 @@ function bindEvents() {
     state.usedHint = true;
     breakCleanStreak(item.fact);
     revealCoachHint(item.fact, true);
-    state.storage.facts[item.fact.key].hints += 1;
+    factMemory(item.fact).hints += 1;
     saveStorage();
   });
 
@@ -706,11 +768,20 @@ function openExternal(url) {
 function applyLaunchMode() {
   const mode = new URLSearchParams(window.location.search).get("mode");
   state.selectedMode = normalizeMode(mode);
+  state.selectedSubject = modeSubject(state.selectedMode);
 }
 
 function normalizeMode(mode) {
   if (mode === "boss") return DEFAULT_MODE;
   return VALID_MODES.has(mode) ? mode : DEFAULT_MODE;
+}
+
+function normalizeSubject(subject) {
+  return SUBJECTS[subject] ? subject : DEFAULT_SUBJECT;
+}
+
+function modeSubject(mode) {
+  return MODE_SUBJECTS[normalizeMode(mode)] || DEFAULT_SUBJECT;
 }
 
 function normalizeTrack(track) {
@@ -730,6 +801,8 @@ function buildFacts() {
         a,
         b,
         key,
+        mode: "multiplication",
+        kind: "multiplication",
         answer: a * b,
         move: moveFor(a, b),
         chant: `${word(a)} · ${word(b)} · ${word(a * b)}`,
@@ -948,6 +1021,19 @@ function loadStorage() {
   }
 }
 
+function factMemory(fact) {
+  const key = fact?.key || "unknown";
+  state.storage.facts[key] ||= {
+    attempts: 0,
+    correct: 0,
+    streak: 0,
+    misses: 0,
+    hints: 0,
+    lastSeen: 0,
+  };
+  return state.storage.facts[key];
+}
+
 function saveStorage() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state.storage));
 }
@@ -975,6 +1061,7 @@ function resetProgress() {
 
   localStorage.removeItem(STORAGE_KEY);
   state.storage = loadStorage();
+  state.selectedSubject = DEFAULT_SUBJECT;
   state.selectedMode = DEFAULT_MODE;
   state.selectedTrack = DEFAULT_TRACK;
   state.sessionLength = SESSION_TRACKS[DEFAULT_TRACK].length;
@@ -1014,6 +1101,7 @@ function resetProgress() {
   state.reward.secondsLeft = REWARD_SECONDS;
   state.rewardFrame.src = "about:blank";
   renderRewardPraise(null);
+  renderSubjectSelection();
   renderModeSelection();
   renderTrackSelection();
   showScreen("home");
@@ -1031,6 +1119,7 @@ function hydrateHome() {
   els.bestStreakLabel.textContent = String(state.storage.bestStreak);
   renderToggles();
   renderSkinPanel();
+  renderSubjectSelection();
   renderTrackSelection();
   renderChampionshipPanel();
 }
@@ -1287,6 +1376,19 @@ function renderToggles() {
   els.voiceButton.style.opacity = state.storage.voice ? "1" : "0.48";
 }
 
+function renderSubjectSelection() {
+  state.selectedSubject = normalizeSubject(state.selectedSubject);
+  els.subjectButtons.forEach((button) => {
+    button.classList.toggle("selected", normalizeSubject(button.dataset.subject) === state.selectedSubject);
+  });
+  els.modePanels.forEach((panel) => {
+    panel.hidden = normalizeSubject(panel.dataset.subjectPanel) !== state.selectedSubject;
+  });
+  if (els.homeSubtitle) {
+    els.homeSubtitle.textContent = SUBJECTS[state.selectedSubject].hero;
+  }
+}
+
 function renderModeSelection() {
   els.modeCards.forEach((button) => {
     button.classList.toggle("selected", normalizeMode(button.dataset.mode) === state.selectedMode);
@@ -1324,6 +1426,7 @@ function startSession(mode) {
   clearChampionshipTimer();
   state.activeChampionship = null;
   state.selectedMode = normalizeMode(mode);
+  state.selectedSubject = modeSubject(state.selectedMode);
   state.selectedTrack = normalizeTrack(state.selectedTrack);
   state.sessionLength = sessionTrack().length;
   state.sessionStartXp = state.storage.xp;
@@ -1352,6 +1455,7 @@ function startChampionship(id) {
   clearChampionshipTimer();
   state.activeChampionship = championship;
   state.selectedMode = normalizeMode(championship.mode);
+  state.selectedSubject = modeSubject(state.selectedMode);
   state.selectedTrack = "championship";
   state.sessionLength = championship.questionCount;
   state.sessionStartXp = state.storage.xp;
@@ -1386,7 +1490,12 @@ function startChampionship(id) {
 }
 
 function buildSession(mode, length = state.sessionLength) {
-  const deck = deckForMode(mode);
+  const normalizedMode = normalizeMode(mode);
+  if (GENERATED_MODES.has(normalizedMode)) {
+    return buildGeneratedSession(normalizedMode, length);
+  }
+
+  const deck = deckForMode(normalizedMode);
   if (!deck.length) return [];
   const maxPerFact = Math.ceil(length / deck.length) + 1;
   const sessionCounts = new Map(deck.map((f) => [f.key, 0]));
@@ -1410,6 +1519,13 @@ function buildSession(mode, length = state.sessionLength) {
   return picked;
 }
 
+function buildGeneratedSession(mode, length) {
+  return Array.from({ length }, () => ({
+    fact: generatePracticeFact(mode),
+    flipped: false,
+  }));
+}
+
 function deckForMode(mode) {
   const normalizedMode = normalizeMode(mode);
   if (normalizedMode === "all") {
@@ -1424,7 +1540,7 @@ function deckForMode(mode) {
 
 function weightedPick(deck, lastKey, sessionCounts, maxPerFact) {
   const weighted = deck.map((fact) => {
-    const memory = state.storage.facts[fact.key];
+    const memory = factMemory(fact);
     const accuracyGap = memory.attempts === 0 ? 1.4 : 1 + (1 - memory.correct / memory.attempts) * 2;
     const missWeight = memory.misses * 0.35;
     const hintWeight = memory.hints * 0.18;
@@ -1445,6 +1561,353 @@ function weightedPick(deck, lastKey, sessionCounts, maxPerFact) {
     if (cursor <= 0) return item.fact;
   }
   return weighted[weighted.length - 1].fact;
+}
+
+function generatePracticeFact(mode) {
+  if (mode === "arith-add") return arithmeticAdditionFact(mode);
+  if (mode === "arith-sub") return arithmeticSubtractionFact(mode);
+  if (mode === "arith-mul") return arithmeticMultiplicationFact(mode);
+  if (mode === "arith-div") return arithmeticDivisionFact(mode);
+  if (mode === "frac-compare") return fractionCompareFact(mode);
+  if (mode === "frac-add") return fractionAdditionFact(mode);
+  if (mode === "frac-sub") return fractionSubtractionFact(mode);
+  if (mode === "frac-mixed") return fractionMixedFact(mode);
+  if (mode === "frac-decimal") return fractionDecimalFact(mode);
+  if (mode === "dec-addsub") return decimalAddSubtractFact(mode);
+  return arithmeticAdditionFact("arith-add");
+}
+
+function arithmeticAdditionFact(mode) {
+  const a = randomInt(1200, 880000);
+  const b = randomInt(120, 1000000 - a);
+  const answer = a + b;
+  return makePracticeFact(mode, {
+    question: `${formatNumber(a)} + ${formatNumber(b)}`,
+    answer,
+    memory: "מחברים מימין לשמאל, ואם עוברים 9 מעבירים 1 לטור הבא.",
+    hint: "חבר קודם אחדות, אחר כך עשרות, מאות ואלפים. אל תדלג על נשיאה.",
+    visualSteps: [formatNumber(a), "+", formatNumber(b), "=", formatNumber(answer)],
+  });
+}
+
+function arithmeticSubtractionFact(mode) {
+  const a = randomInt(5000, 1000000);
+  const b = randomInt(100, a - 1);
+  const answer = a - b;
+  return makePracticeFact(mode, {
+    question: `${formatNumber(a)} - ${formatNumber(b)}`,
+    answer,
+    memory: "בחיסור ארוך עובדים טור-טור. אם חסר, פורטים מהטור שמשמאל.",
+    hint: "בדוק כל טור בנפרד: האם צריך לפרוט עשרת, מאה או אלף?",
+    visualSteps: [formatNumber(a), "-", formatNumber(b), "=", formatNumber(answer)],
+  });
+}
+
+function arithmeticMultiplicationFact(mode) {
+  const b = randomInt(12, 98);
+  const maxA = Math.min(9999, Math.floor(1000000 / b));
+  const a = randomInt(120, Math.max(120, maxA));
+  const answer = a * b;
+  return makePracticeFact(mode, {
+    question: `${formatNumber(a)} × ${formatNumber(b)}`,
+    answer,
+    memory: "כפל ארוך: כופלים כל ספרה, מזיזים שורה אחת שמאלה, ואז מחברים.",
+    hint: `פרק את ${b}: כפול עשרות ועוד כפול אחדות.`,
+    visualSteps: [formatNumber(a), "×", formatNumber(b), "=", formatNumber(answer)],
+  });
+}
+
+function arithmeticDivisionFact(mode) {
+  const divisor = randomInt(2, 96);
+  const quotient = randomInt(12, Math.floor(1000000 / divisor));
+  const dividend = divisor * quotient;
+  return makePracticeFact(mode, {
+    question: `${formatNumber(dividend)} ÷ ${formatNumber(divisor)}`,
+    answer: quotient,
+    memory: "חילוק ארוך: כמה נכנס, כופלים, מחסרים ומורידים את הספרה הבאה.",
+    hint: `אפשר לחשוב הפוך: איזה מספר כפול ${divisor} נותן ${formatNumber(dividend)}?`,
+    visualSteps: [formatNumber(dividend), "÷", formatNumber(divisor), "=", formatNumber(quotient)],
+  });
+}
+
+function fractionCompareFact(mode) {
+  const equal = Math.random() < 0.22;
+  let left;
+  let right;
+  if (equal) {
+    const base = simpleProperFraction();
+    const multiplier = sample([2, 3, 4]);
+    left = base;
+    right = { n: base.n * multiplier, d: base.d * multiplier };
+  } else {
+    left = simpleProperFraction();
+    right = simpleProperFraction();
+    while (left.n * right.d === right.n * left.d) right = simpleProperFraction();
+  }
+  const leftCross = left.n * right.d;
+  const rightCross = right.n * left.d;
+  const answer = leftCross === rightCross ? "=" : leftCross > rightCross ? ">" : "<";
+  return makePracticeFact(mode, {
+    question: `${formatFraction(left)} ? ${formatFraction(right)}`,
+    answer,
+    options: shuffle(["<", "=", ">"]),
+    factLine: `${formatFraction(left)} ${answer} ${formatFraction(right)}`,
+    memory: `כפל בהצלבה: ${left.n}×${right.d} מול ${right.n}×${left.d}.`,
+    hint: "כדי להשוות שברים, כופלים בהצלבה ומשווים את שתי התוצאות.",
+    visualSteps: [`${left.n}×${right.d}=${leftCross}`, answer, `${right.n}×${left.d}=${rightCross}`],
+  });
+}
+
+function fractionAdditionFact(mode) {
+  const left = simpleProperFraction();
+  const right = simpleProperFraction();
+  const common = lcm(left.d, right.d);
+  const numerator = left.n * (common / left.d) + right.n * (common / right.d);
+  const answer = formatMixedFromFraction({ n: numerator, d: common });
+  const candidates = [
+    formatFraction(reduceFraction(left.n + right.n, left.d + right.d)),
+    formatMixedFromFraction({ n: numerator + 1, d: common }),
+    formatMixedFromFraction({ n: Math.max(1, numerator - 1), d: common }),
+    formatMixedFromFraction({ n: left.n + right.n, d: common }),
+    formatMixedFromFraction({ n: numerator, d: left.d * right.d }),
+  ];
+  return makePracticeFact(mode, {
+    question: `${formatFraction(left)} + ${formatFraction(right)}`,
+    answer,
+    options: stringOptions(answer, candidates),
+    memory: `מכנה משותף ${common}. קודם מביאים לאותו מכנה, ואז מחברים מונים.`,
+    hint: "מצא מכנה משותף, שנה את שני השברים, וחבר רק את המונים.",
+    visualSteps: [formatFraction(left), "+", formatFraction(right), "מכנה", String(common)],
+  });
+}
+
+function fractionSubtractionFact(mode) {
+  let left = simpleProperFraction();
+  let right = simpleProperFraction();
+  if (left.n * right.d < right.n * left.d) {
+    [left, right] = [right, left];
+  }
+  const common = lcm(left.d, right.d);
+  const numerator = left.n * (common / left.d) - right.n * (common / right.d);
+  const answer = formatMixedFromFraction({ n: numerator, d: common });
+  const candidates = [
+    formatFraction(reduceFraction(Math.abs(left.n - right.n), Math.max(1, Math.abs(left.d - right.d)) || 1)),
+    formatMixedFromFraction({ n: numerator + 1, d: common }),
+    formatMixedFromFraction({ n: Math.max(0, numerator - 1), d: common }),
+    formatMixedFromFraction({ n: Math.abs(left.n - right.n), d: common }),
+    formatMixedFromFraction({ n: numerator, d: left.d * right.d }),
+  ];
+  return makePracticeFact(mode, {
+    question: `${formatFraction(left)} - ${formatFraction(right)}`,
+    answer,
+    options: stringOptions(answer, candidates),
+    memory: `מכנה משותף ${common}. מחסרים רק את המונים אחרי שהמכנה זהה.`,
+    hint: "קודם מכנה משותף, ואז חיסור מונים. המכנה נשאר אותו דבר.",
+    visualSteps: [formatFraction(left), "-", formatFraction(right), "מכנה", String(common)],
+  });
+}
+
+function fractionMixedFact(mode) {
+  const denominator = randomInt(3, 12);
+  const whole = randomInt(1, 6);
+  const remainder = randomInt(1, denominator - 1);
+  const numerator = whole * denominator + remainder;
+  const answer = formatMixedFromFraction({ n: numerator, d: denominator });
+  const candidates = [
+    `${whole + 1} ${formatFraction(reduceFraction(remainder, denominator))}`,
+    `${whole} ${formatFraction(reduceFraction(Math.min(denominator - 1, remainder + 1), denominator))}`,
+    `${Math.max(1, whole - 1)} ${formatFraction(reduceFraction(remainder, denominator))}`,
+    formatFraction(reduceFraction(numerator, denominator)),
+    `${whole}/${denominator}`,
+  ];
+  return makePracticeFact(mode, {
+    question: `${numerator}/${denominator} = ?`,
+    answer,
+    options: stringOptions(answer, candidates),
+    memory: `${numerator} ÷ ${denominator}: יש ${whole} שלמים ושארית ${remainder}.`,
+    hint: "חלק את המונה במכנה. התוצאה השלמה היא לפני השבר, והשארית נשארת למעלה.",
+    visualSteps: [`${numerator}÷${denominator}`, "שלמים", String(whole), "שארית", String(remainder)],
+  });
+}
+
+function fractionDecimalFact(mode) {
+  const denominator = sample([2, 4, 5, 10, 20, 25, 50, 100]);
+  const numerator = randomInt(1, denominator - 1);
+  const answer = decimalString(numerator / denominator);
+  const candidates = decimalOptions(answer, denominator >= 20 ? 0.01 : 0.1);
+  return makePracticeFact(mode, {
+    question: `${numerator}/${denominator} = ?`,
+    answer,
+    options: stringOptions(answer, candidates),
+    memory: "כדי להפוך לעשרוני, חושבים איך להגיע למכנה 10 או 100.",
+    hint: `נסה להפוך את ${denominator} ל-10 או 100, ואז כתוב את המונה אחרי הנקודה.`,
+    visualSteps: [`${numerator}/${denominator}`, "→", answer],
+  });
+}
+
+function decimalAddSubtractFact(mode) {
+  const scale = sample([10, 100]);
+  let left = randomInt(12, 900);
+  let right = randomInt(3, 260);
+  const subtract = Math.random() < 0.5;
+  if (subtract && right > left) [left, right] = [right, left];
+  const answerValue = subtract ? left - right : left + right;
+  const leftText = decimalString(left / scale);
+  const rightText = decimalString(right / scale);
+  const answer = decimalString(answerValue / scale);
+  const op = subtract ? "-" : "+";
+  return makePracticeFact(mode, {
+    question: `${leftText} ${op} ${rightText}`,
+    answer,
+    options: stringOptions(answer, decimalOptions(answer, scale === 100 ? 0.01 : 0.1)),
+    memory: "בעשרוניים מיישרים את הנקודות אחת מתחת לשנייה ואז פותרים רגיל.",
+    hint: "שים את הנקודות העשרוניות באותו מקום. אפסים בסוף יכולים לעזור.",
+    visualSteps: [leftText, op, rightText, "=", answer],
+  });
+}
+
+function makePracticeFact(mode, config) {
+  const answer = config.answer;
+  const question = config.question;
+  const answerLabel = config.answerText || answerText(answer);
+  return {
+    key: config.key || `${mode}:${question}:${answerKey(answer)}`,
+    a: null,
+    b: null,
+    mode,
+    kind: modeSubject(mode),
+    question,
+    answer,
+    answerText: answerLabel,
+    options: config.options,
+    factLine: config.factLine || `${question} = ${answerLabel}`,
+    speak: config.speak || `${question}, התשובה ${answerLabel}`,
+    speakQuestion: config.speakQuestion || `כמה זה ${question}`,
+    memory: config.memory || "",
+    hint: config.hint || config.memory || "",
+    trick: { type: "steps", text: config.hint || config.memory || `${question} שווה ${answerLabel}` },
+    chant: config.chant || `${question} · ${answerLabel}`,
+    visualSteps: config.visualSteps || [question, "=", answerLabel],
+    move: config.move || moveForGeneratedMode(mode),
+  };
+}
+
+function moveForGeneratedMode(mode) {
+  if (mode.includes("div") || mode.includes("mixed")) return "au";
+  if (mode.includes("mul") || mode.includes("compare")) return "armada";
+  if (mode.includes("frac")) return "meia";
+  if (mode.includes("sub")) return "esquiva";
+  return "ginga-pop";
+}
+
+function simpleProperFraction() {
+  const denominator = sample([2, 3, 4, 5, 6, 8, 9, 10, 12]);
+  const numerator = randomInt(1, denominator - 1);
+  return reduceFraction(numerator, denominator);
+}
+
+function reduceFraction(numerator, denominator) {
+  if (denominator === 0) return { n: numerator, d: 1 };
+  if (numerator === 0) return { n: 0, d: 1 };
+  const sign = denominator < 0 ? -1 : 1;
+  const divisor = gcd(Math.abs(numerator), Math.abs(denominator));
+  return {
+    n: (numerator / divisor) * sign,
+    d: Math.abs(denominator / divisor),
+  };
+}
+
+function formatFraction(fraction) {
+  const reduced = reduceFraction(fraction.n, fraction.d);
+  if (reduced.d === 1) return String(reduced.n);
+  return `${reduced.n}/${reduced.d}`;
+}
+
+function formatMixedFromFraction(fraction) {
+  const reduced = reduceFraction(fraction.n, fraction.d);
+  if (reduced.d === 1) return String(reduced.n);
+  const whole = Math.floor(reduced.n / reduced.d);
+  const remainder = reduced.n % reduced.d;
+  if (whole === 0) return `${remainder}/${reduced.d}`;
+  if (remainder === 0) return String(whole);
+  return `${whole} ${formatFraction({ n: remainder, d: reduced.d })}`;
+}
+
+function decimalString(value) {
+  return Number(value.toFixed(3)).toString();
+}
+
+function decimalOptions(answer, step) {
+  const value = Number(answer);
+  return [
+    decimalString(value + step),
+    decimalString(Math.max(0, value - step)),
+    decimalString(value + step * 2),
+    decimalString(Math.max(0, value - step * 2)),
+    decimalString(value + step * 10),
+    decimalString(Math.max(0, value - step * 10)),
+  ];
+}
+
+function stringOptions(answer, candidates) {
+  const set = new Set([answerKey(answer)]);
+  const options = [answer];
+  for (const candidate of candidates) {
+    const key = answerKey(candidate);
+    if (!key || set.has(key)) continue;
+    set.add(key);
+    options.push(candidate);
+    if (options.length >= ANSWER_OPTION_COUNT) break;
+  }
+
+  while (options.length < ANSWER_OPTION_COUNT) {
+    const candidate = fallbackStringOption(answer);
+    const key = answerKey(candidate);
+    if (set.has(key)) continue;
+    set.add(key);
+    options.push(candidate);
+  }
+
+  return shuffle(options);
+}
+
+function fallbackStringOption(answer) {
+  const text = answerText(answer);
+  if (text.includes(".")) {
+    return decimalString(randomInt(1, 190) / 10);
+  }
+  const denominator = sample([2, 3, 4, 5, 6, 8, 10, 12]);
+  const numerator = randomInt(1, denominator * 3);
+  return numerator > denominator
+    ? formatMixedFromFraction({ n: numerator, d: denominator })
+    : formatFraction({ n: numerator, d: denominator });
+}
+
+function gcd(a, b) {
+  let left = Math.abs(a);
+  let right = Math.abs(b);
+  while (right) {
+    [left, right] = [right, left % right];
+  }
+  return left || 1;
+}
+
+function lcm(a, b) {
+  return Math.abs(a * b) / gcd(a, b);
+}
+
+function randomInt(min, max) {
+  const low = Math.ceil(min);
+  const high = Math.floor(max);
+  return Math.floor(Math.random() * (high - low + 1)) + low;
+}
+
+function sample(items) {
+  return items[Math.floor(Math.random() * items.length)];
+}
+
+function formatNumber(value) {
+  return String(value).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
 function nextQuestion() {
@@ -1472,7 +1935,9 @@ function nextQuestion() {
   if (inChampionship) {
     renderChampionshipScore();
   }
-  els.questionText.textContent = formatQuestion(item);
+  const questionLabel = formatQuestion(item);
+  els.questionText.textContent = questionLabel;
+  els.questionText.classList.toggle("long-question", questionLabel.length >= 12);
   hideCoachHint();
   renderAnswers(item);
   renderProgress();
@@ -1487,6 +1952,7 @@ function currentItem() {
 }
 
 function formatQuestion(item) {
+  if (item.fact.question) return item.fact.question;
   const first = item.flipped ? item.fact.b : item.fact.a;
   const second = item.flipped ? item.fact.a : item.fact.b;
   return `${first} × ${second}`;
@@ -1499,13 +1965,24 @@ function renderAnswers(item) {
     const button = document.createElement("button");
     button.className = "answer-button";
     button.type = "button";
-    button.textContent = option;
+    const label = answerText(option);
+    button.dataset.answer = answerKey(option);
+    button.textContent = label;
+    button.classList.toggle("long-answer", label.length >= 6);
     button.addEventListener("click", () => chooseAnswer(button, option));
     els.answerGrid.append(button);
   }
 }
 
 function buildOptions(fact) {
+  if (Array.isArray(fact.options) && fact.options.length) {
+    return fact.options.length <= ANSWER_OPTION_COUNT ? shuffle(fact.options) : shuffle(fact.options).slice(0, ANSWER_OPTION_COUNT);
+  }
+
+  if (GENERATED_MODES.has(fact.mode)) {
+    return buildGeneratedOptions(fact);
+  }
+
   const set = new Set([fact.answer]);
   const variants = [
     ...FACTS.map((candidate) => candidate.answer).filter(
@@ -1533,6 +2010,45 @@ function buildOptions(fact) {
   return shuffle(Array.from(set));
 }
 
+function buildGeneratedOptions(fact) {
+  if (typeof fact.answer !== "number") {
+    return stringOptions(fact.answer, []);
+  }
+
+  const set = new Set([fact.answer]);
+  const spread = Math.max(1, Math.round(Math.abs(fact.answer) * 0.04));
+  const offsets =
+    fact.answer < 120
+      ? [1, 2, 3, 4, 5, 8, 10, 12]
+      : [1, 10, 100, 1000, spread, spread * 2, spread * 3];
+
+  for (const offset of offsets) {
+    if (set.size >= ANSWER_OPTION_COUNT) break;
+    if (fact.answer - offset >= 0) set.add(fact.answer - offset);
+    if (set.size >= ANSWER_OPTION_COUNT) break;
+    if (fact.answer + offset <= 1000000) set.add(fact.answer + offset);
+  }
+
+  while (set.size < ANSWER_OPTION_COUNT) {
+    const drift = randomInt(1, Math.max(12, spread * 5));
+    const value = clamp(Math.round(fact.answer + (Math.random() < 0.5 ? -drift : drift)), 0, 1000000);
+    set.add(value);
+  }
+
+  return shuffle(Array.from(set));
+}
+
+function answerKey(value) {
+  return String(value).trim();
+}
+
+function answerText(value) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return formatNumber(value);
+  }
+  return String(value);
+}
+
 function shuffle(items) {
   const copy = [...items];
   for (let i = copy.length - 1; i > 0; i -= 1) {
@@ -1550,8 +2066,8 @@ function chooseAnswer(button, answer) {
   }
   const item = currentItem();
   const fact = item.fact;
-  const correct = answer === fact.answer;
-  const memory = state.storage.facts[fact.key];
+  const correct = answerKey(answer) === answerKey(fact.answer);
+  const memory = factMemory(fact);
   const assisted = state.currentTries > 0 || state.usedHint;
 
   memory.lastSeen = Date.now();
@@ -1624,8 +2140,8 @@ function chooseAnswer(button, answer) {
 function chooseChampionshipAnswer(button, answer) {
   const item = currentItem();
   const fact = item.fact;
-  const correct = answer === fact.answer;
-  const memory = state.storage.facts[fact.key];
+  const correct = answerKey(answer) === answerKey(fact.answer);
+  const memory = factMemory(fact);
 
   state.locked = true;
   stopChampionshipTimer(true);
@@ -1669,8 +2185,8 @@ function chooseChampionshipAnswer(button, answer) {
 
 function breakCleanStreak(fact = null) {
   state.streak = 0;
-  if (fact && state.storage.facts[fact.key]) {
-    state.storage.facts[fact.key].streak = 0;
+  if (fact) {
+    factMemory(fact).streak = 0;
   }
   renderProgress();
 }
@@ -1678,7 +2194,7 @@ function breakCleanStreak(fact = null) {
 function markAnswerButtons(correctAnswer) {
   els.answerGrid.querySelectorAll(".answer-button").forEach((answerButton) => {
     answerButton.disabled = true;
-    if (Number(answerButton.textContent) === correctAnswer) {
+    if (answerButton.dataset.answer === answerKey(correctAnswer)) {
       answerButton.classList.add("correct");
     }
   });
@@ -1686,7 +2202,7 @@ function markAnswerButtons(correctAnswer) {
 
 function simplifyChoices(correctAnswer) {
   const wrongButtons = Array.from(els.answerGrid.querySelectorAll(".answer-button")).filter(
-    (answerButton) => !answerButton.disabled && Number(answerButton.textContent) !== correctAnswer,
+    (answerButton) => !answerButton.disabled && answerButton.dataset.answer !== answerKey(correctAnswer),
   );
   shuffle(wrongButtons)
     .slice(0, Math.max(0, wrongButtons.length - 1))
@@ -1698,7 +2214,9 @@ function simplifyChoices(correctAnswer) {
 
 function revealCoachHint(fact, manual) {
   const prefix = manual ? "רמז:" : "כמעט. נבנה את זה:";
-  els.coachHint.textContent = `${prefix} ${coachHintText(fact)} ${fact.memory}`;
+  const hint = coachHintText(fact);
+  const memory = fact.memory && !hint.includes(fact.memory) ? ` ${fact.memory}` : "";
+  els.coachHint.textContent = `${prefix} ${hint}${memory}`;
   els.coachHint.hidden = false;
 }
 
@@ -1760,7 +2278,7 @@ function handleChampionshipTimeout() {
   const item = currentItem();
   if (!item) return;
   const fact = item.fact;
-  const memory = state.storage.facts[fact.key];
+  const memory = factMemory(fact);
   state.locked = true;
   stopChampionshipTimer(false);
   state.championshipRun.elapsedMs += state.activeChampionship.secondsPerQuestion * 1000;
@@ -1788,6 +2306,9 @@ function handleChampionshipTimeout() {
 }
 
 function coachHintText(fact) {
+  if (fact.kind !== "multiplication" && fact.hint) {
+    return fact.hint;
+  }
   if (fact.a === 1 || fact.b === 1) {
     return "כפול 1 הוא עוגן קל.";
   }
@@ -2079,11 +2600,15 @@ function runMove(move) {
 
 function showFact(fact, isHint, onDone = null) {
   state.fact.onDone = typeof onDone === "function" ? onDone : null;
-  els.factBig.textContent = `${fact.a} × ${fact.b} = ${fact.answer}`;
-  els.factChant.textContent = isHint ? fact.memory : `${fact.chant} · ${fact.memory}`;
+  const factLine = fact.factLine || `${formatQuestion({ fact, flipped: false })} = ${answerText(fact.answer)}`;
+  els.factBig.textContent = factLine;
+  els.factChant.textContent = isHint
+    ? fact.memory
+    : [fact.chant, fact.memory].filter(Boolean).join(" · ");
   renderFactVisual(fact);
   if (!els.factDialog.open) els.factDialog.showModal();
-  speak(isHint ? fact.trick.text : `${fact.speak}. טיפ לזכור: ${fact.memory}`);
+  const explanation = isHint ? fact.trick?.text || fact.hint || fact.memory : `${fact.speak}. טיפ לזכור: ${fact.memory}`;
+  speak(explanation);
 }
 
 function closeFact() {
@@ -2097,6 +2622,17 @@ function closeFact() {
 
 function renderFactVisual(fact) {
   els.factVisual.innerHTML = "";
+  if (fact.kind !== "multiplication") {
+    const steps = fact.visualSteps?.length ? fact.visualSteps : [fact.question, "=", answerText(fact.answer)];
+    steps.forEach((value) => {
+      const stack = document.createElement("div");
+      stack.className = "visual-stack visual-step";
+      stack.textContent = value;
+      els.factVisual.append(stack);
+    });
+    return;
+  }
+
   if (fact.trick.type === "nine") {
     const other = fact.a === 9 ? fact.b : fact.a;
     const tens = document.createElement("div");
@@ -2258,14 +2794,6 @@ function progressionResultText(progression) {
 }
 
 function renderNextList(progression = null) {
-  const weakest = FACTS.map((fact) => {
-    const memory = state.storage.facts[fact.key];
-    const score = memory.attempts === 0 ? -1 : memory.correct / memory.attempts - memory.misses * 0.05;
-    return { fact, score };
-  })
-    .sort((left, right) => left.score - right.score)
-    .slice(0, 3);
-
   els.nextList.innerHTML = "";
   if (progression) {
     const chip = document.createElement("div");
@@ -2278,6 +2806,28 @@ function renderNextList(progression = null) {
     els.nextList.append(chip);
   }
 
+  if (modeSubject(state.selectedMode) !== "multiplication") {
+    nextPracticeTipsForMode(state.selectedMode).forEach((text) => {
+      const chip = document.createElement("div");
+      chip.className = "next-chip";
+      const label = document.createElement("span");
+      label.textContent = MODE_LABELS[state.selectedMode] || SUBJECTS[state.selectedSubject].label;
+      const value = document.createElement("strong");
+      value.textContent = text;
+      chip.append(label, value);
+      els.nextList.append(chip);
+    });
+    return;
+  }
+
+  const weakest = FACTS.map((fact) => {
+    const memory = factMemory(fact);
+    const score = memory.attempts === 0 ? -1 : memory.correct / memory.attempts - memory.misses * 0.05;
+    return { fact, score };
+  })
+    .sort((left, right) => left.score - right.score)
+    .slice(0, 3);
+
   weakest.forEach(({ fact }) => {
     const chip = document.createElement("div");
     chip.className = "next-chip";
@@ -2288,6 +2838,19 @@ function renderNextList(progression = null) {
     chip.append(label, formula);
     els.nextList.append(chip);
   });
+}
+
+function nextPracticeTipsForMode(mode) {
+  if (mode === "arith-add") return ["נסה עוד רודה עם נשיאות", "בדוק כל טור בנפרד", "אל תמהר במספרים גדולים"];
+  if (mode === "arith-sub") return ["תרגל פריטה מסודרת", "בדוק שהמספר העליון גדול", "חזור על הטור שבו היה קשה"];
+  if (mode === "arith-mul") return ["פרק לעשרות ואחדות", "כתוב תוצאות ביניים בראש", "בסוף מחברים את השורות"];
+  if (mode === "arith-div") return ["כמה נכנס, כפל, חיסור, הורדה", "בדוק הפוך עם כפל", "שמור על סדר הספרות"];
+  if (mode === "frac-compare") return ["כפל בהצלבה", "אפשר גם מכנה משותף", "בדוק מי גדול באמת"];
+  if (mode === "frac-add") return ["מכנה משותף ואז מונים", "צמצם בסוף", "אם יצא גדול מ-1, הפוך למעורב"];
+  if (mode === "frac-sub") return ["מכנה משותף לפני החיסור", "מחסרים רק מונים", "צמצם את התוצאה"];
+  if (mode === "frac-mixed") return ["מונה חלקי מכנה", "השארית נשארת למעלה", "השלם בא לפני השבר"];
+  if (mode === "frac-decimal") return ["הפוך למכנה 10 או 100", "שים לב למיקום הנקודה", "בדוק עם חילוק"];
+  return ["יישר נקודות עשרוניות", "אפשר להוסיף אפסים בסוף", "פותרים כמו חיבור וחיסור רגיל"];
 }
 
 function randomPraise(kind = "clean") {
@@ -2325,6 +2888,10 @@ function normalizePraise(entry) {
 }
 
 function speakQuestion(item, delay = 0, force = false) {
+  if (item.fact.speakQuestion) {
+    speak(item.fact.speakQuestion, delay, force);
+    return;
+  }
   const first = item.flipped ? item.fact.b : item.fact.a;
   const second = item.flipped ? item.fact.a : item.fact.b;
   const phrase = `${word(first)} כפול ${word(second)}`;
@@ -2638,9 +3205,10 @@ function drawRodaBackdrop(ctx, width, height, kind, now) {
   ctx.font = `900 ${Math.floor(radius * 0.28)}px Arial`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText("7", cx - radius * 0.68, cy - radius * 0.42);
-  ctx.fillText("8", cx, cy + radius * 0.78);
-  ctx.fillText("9", cx + radius * 0.68, cy - radius * 0.42);
+  const labels = backdropLabels();
+  ctx.fillText(labels[0], cx - radius * 0.68, cy - radius * 0.42);
+  ctx.fillText(labels[1], cx, cy + radius * 0.78);
+  ctx.fillText(labels[2], cx + radius * 0.68, cy - radius * 0.42);
   ctx.restore();
 
   for (let i = 0; i < 16; i += 1) {
@@ -2655,6 +3223,16 @@ function drawRodaBackdrop(ctx, width, height, kind, now) {
     ctx.fill();
   }
   ctx.globalAlpha = 1;
+}
+
+function backdropLabels() {
+  if (state.selectedSubject === "arithmetic") return ["+", "×", "÷"];
+  if (state.selectedSubject === "fractions") return ["1/2", "0.5", ">"];
+  if (state.selectedMode === "boss-123") return ["1", "2", "3"];
+  if (state.selectedMode === "boss-456") return ["4", "5", "6"];
+  if (state.selectedMode === "boss-789") return ["7", "8", "9"];
+  if (INDIVIDUAL_MODES.includes(state.selectedMode)) return [state.selectedMode, "×", "10"];
+  return ["1", "5", "10"];
 }
 
 function drawSpectators(ctx, cx, cy, radius, now) {
