@@ -32,6 +32,8 @@ public final class MainActivity extends Activity {
     private WebView webView;
     private TextToSpeech textToSpeech;
     private boolean ttsReady;
+    private boolean hebrewTtsAvailable;
+    private boolean ttsWarningShown;
     private String pendingSpeech;
 
     @Override
@@ -61,12 +63,7 @@ public final class MainActivity extends Activity {
                 this,
                 status -> {
                     if (status == TextToSpeech.SUCCESS) {
-                        Locale hebrew = new Locale("he", "IL");
-                        int result = textToSpeech.setLanguage(hebrew);
-                        if (result == TextToSpeech.LANG_MISSING_DATA
-                                || result == TextToSpeech.LANG_NOT_SUPPORTED) {
-                            textToSpeech.setLanguage(Locale.getDefault());
-                        }
+                        hebrewTtsAvailable = configureHebrewTts();
                         textToSpeech.setSpeechRate(0.92f);
                         ttsReady = true;
                         if (pendingSpeech != null) {
@@ -137,8 +134,32 @@ public final class MainActivity extends Activity {
         if (textToSpeech == null) {
             return;
         }
+        if (!hebrewTtsAvailable) {
+            if (!ttsWarningShown) {
+                Toast.makeText(this, "צריך להתקין קול עברי במכשיר כדי לשמוע הקראה", Toast.LENGTH_LONG).show();
+                ttsWarningShown = true;
+            }
+            return;
+        }
         textToSpeech.stop();
         textToSpeech.speak(text, TextToSpeech.QUEUE_FLUSH, null, "darmon-capoeira-tts");
+    }
+
+    private boolean configureHebrewTts() {
+        Locale[] hebrewLocales = {
+            Locale.forLanguageTag("he-IL"),
+            new Locale("iw", "IL"),
+            new Locale("he"),
+            new Locale("iw")
+        };
+        for (Locale locale : hebrewLocales) {
+            int result = textToSpeech.setLanguage(locale);
+            if (result != TextToSpeech.LANG_MISSING_DATA
+                    && result != TextToSpeech.LANG_NOT_SUPPORTED) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private final class TtsBridge {

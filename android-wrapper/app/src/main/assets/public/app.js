@@ -96,12 +96,12 @@ const CLEAN_PRAISE = [
   "אמא אומרת שאתה אלוף",
   "מי זה זה??",
   "יאללה דרמון",
-  "level up",
-  "nice one",
-  "clean hit",
-  "you got it",
-  "lets go",
-  "boom",
+  "עלית רמה",
+  "יפה מאוד",
+  "פגיעה נקייה",
+  "זה שלך לגמרי",
+  "יאללה ממשיכים",
+  "בום חזק",
   ptPraise("Boa", "בואה", "יפה / טוב"),
   ptPraise("Mandou bem", "מנדו בן", "עשית את זה טוב"),
   ptPraise("Massa", "מסה", "מגניב"),
@@ -122,9 +122,9 @@ const ASSISTED_PRAISE = [
   "יפה, צעד צעד",
   "מצוין, המשכת לחשוב",
   "הופה, זה הסתדר",
-  "good save",
-  "nice comeback",
-  "you fixed it",
+  "הצלה יפה",
+  "חזרה יפה",
+  "תיקנת מעולה",
   ptPraise("Boa", "בואה, חזרת לזה", "יפה / טוב"),
   ptPraise("Show", "שו, תיקנת יפה", "מעולה"),
   ptPraise("Bora", "בורה, ממשיכים", "יאללה / בוא נמשיך"),
@@ -2961,8 +2961,9 @@ function speak(text, delay = 0, force = false) {
   if (!force && !state.storage.voice) return;
   window.clearTimeout(speak.timer);
   speak.timer = window.setTimeout(() => {
+    const spokenText = normalizeSpeechText(text);
     if (window.AndroidTts && typeof window.AndroidTts.speak === "function") {
-      window.AndroidTts.speak(text);
+      window.AndroidTts.speak(spokenText);
       return;
     }
 
@@ -2972,12 +2973,38 @@ function speak(text, delay = 0, force = false) {
     }
 
     stopSpeech();
-    const utterance = new SpeechSynthesisUtterance(text);
+    const utterance = new SpeechSynthesisUtterance(spokenText);
     utterance.lang = "he-IL";
+    const voice = hebrewVoice();
+    if (voice) utterance.voice = voice;
     utterance.rate = 0.9;
     utterance.pitch = 1.04;
     speechSynthesis.speak(utterance);
   }, delay);
+}
+
+function normalizeSpeechText(text) {
+  return String(text)
+    .replace(/\bDarmon\b/gi, "דרמון")
+    .replace(/\bCapoeira\b/gi, "קפוארה")
+    .replace(/×/g, " כפול ")
+    .replace(/÷/g, " חלקי ")
+    .replace(/\+/g, " ועוד ")
+    .replace(/[−-]/g, " פחות ")
+    .replace(/>/g, " גדול מ ")
+    .replace(/</g, " קטן מ ")
+    .replace(/=/g, " שווה ")
+    .replace(/\?/g, "")
+    .replace(/\//g, " חלקי ")
+    .replace(/,/g, " ")
+    .replace(/·/g, ". ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function hebrewVoice() {
+  if (!("speechSynthesis" in window)) return null;
+  return speechSynthesis.getVoices().find((voice) => /^he(-|_|$)/i.test(voice.lang)) || null;
 }
 
 function stopSpeech() {
@@ -3931,7 +3958,7 @@ function drawBurst() {
 function registerServiceWorker() {
   if (!("serviceWorker" in navigator)) return;
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./service-worker.js?v=41").catch(() => {});
+    navigator.serviceWorker.register("./service-worker.js?v=42").catch(() => {});
   });
 }
 
