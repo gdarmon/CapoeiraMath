@@ -440,6 +440,7 @@ const CAPOEIRA_REWARD_LIMIT = Math.max(0, REWARD_CLIP_TARGET - INLINE_REWARD_VID
 const FACTS = buildFacts();
 
 const state = {
+  homeStep: "subjects",
   selectedSubject: DEFAULT_SUBJECT,
   selectedMode: DEFAULT_MODE,
   selectedTrack: DEFAULT_TRACK,
@@ -533,9 +534,15 @@ function bindElements() {
     resetProgressButton: document.getElementById("resetProgressButton"),
     againButton: document.getElementById("againButton"),
     homeSubtitle: document.getElementById("homeSubtitle"),
+    subjectGrid: document.getElementById("subjectGrid"),
+    selectedSubjectPanel: document.getElementById("selectedSubjectPanel"),
+    selectedSubjectLabel: document.getElementById("selectedSubjectLabel"),
+    changeSubjectButton: document.getElementById("changeSubjectButton"),
     modeCards: Array.from(document.querySelectorAll(".mode-card")),
+    modeGrid: document.getElementById("modeGrid"),
     modePanels: Array.from(document.querySelectorAll("[data-subject-panel]")),
     subjectButtons: Array.from(document.querySelectorAll(".subject-card")),
+    trackGrid: document.getElementById("trackGrid"),
     trackCards: Array.from(document.querySelectorAll(".track-card")),
     championshipPanel: document.getElementById("championshipPanel"),
     championshipTitle: document.getElementById("championshipTitle"),
@@ -618,13 +625,16 @@ function bindEvents() {
   els.subjectButtons.forEach((button) => {
     button.addEventListener("click", () => {
       const subject = normalizeSubject(button.dataset.subject);
-      state.selectedSubject = subject;
-      state.selectedMode = SUBJECT_DEFAULT_MODES[subject];
-      renderSubjectSelection();
-      renderModeSelection();
+      enterSubjectPractice(subject);
       tap();
       playTap();
     });
+  });
+
+  els.changeSubjectButton.addEventListener("click", () => {
+    showSubjectPicker();
+    tap();
+    playTap();
   });
 
   els.modeCards.forEach((button) => {
@@ -681,6 +691,12 @@ function bindEvents() {
   els.resetProgressButton.addEventListener("click", confirmResetProgress);
 
   els.backButton.addEventListener("click", () => {
+    if (state.currentScreen === "home" && state.homeStep === "practice") {
+      showSubjectPicker();
+      tap();
+      playTap();
+      return;
+    }
     stopSpeech();
     clearChampionshipTimer();
     state.activeChampionship = null;
@@ -769,6 +785,9 @@ function applyLaunchMode() {
   const mode = new URLSearchParams(window.location.search).get("mode");
   state.selectedMode = normalizeMode(mode);
   state.selectedSubject = modeSubject(state.selectedMode);
+  if (mode && (mode === "boss" || VALID_MODES.has(mode))) {
+    state.homeStep = "practice";
+  }
 }
 
 function normalizeMode(mode) {
@@ -1061,6 +1080,7 @@ function resetProgress() {
 
   localStorage.removeItem(STORAGE_KEY);
   state.storage = loadStorage();
+  state.homeStep = "subjects";
   state.selectedSubject = DEFAULT_SUBJECT;
   state.selectedMode = DEFAULT_MODE;
   state.selectedTrack = DEFAULT_TRACK;
@@ -1322,6 +1342,10 @@ function championshipForHome() {
 }
 
 function renderChampionshipPanel() {
+  if (state.homeStep !== "practice" || state.selectedSubject !== "multiplication") {
+    els.championshipPanel.hidden = true;
+    return;
+  }
   const championship = championshipForHome();
   if (!championship) {
     els.championshipPanel.hidden = true;
@@ -1376,16 +1400,48 @@ function renderToggles() {
   els.voiceButton.style.opacity = state.storage.voice ? "1" : "0.48";
 }
 
+function enterSubjectPractice(subject) {
+  state.homeStep = "practice";
+  state.selectedSubject = normalizeSubject(subject);
+  state.selectedMode = SUBJECT_DEFAULT_MODES[state.selectedSubject];
+  renderSubjectSelection();
+  renderModeSelection();
+  renderChampionshipPanel();
+  requestAnimationFrame(() => {
+    els.selectedSubjectPanel?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  });
+}
+
+function showSubjectPicker() {
+  state.homeStep = "subjects";
+  renderSubjectSelection();
+  renderChampionshipPanel();
+}
+
 function renderSubjectSelection() {
   state.selectedSubject = normalizeSubject(state.selectedSubject);
+  const practiceStep = state.homeStep === "practice";
+  els.homeScreen.classList.toggle("subject-pick", !practiceStep);
+  els.homeScreen.classList.toggle("practice-pick", practiceStep);
+  els.subjectGrid.hidden = practiceStep;
+  els.selectedSubjectPanel.hidden = !practiceStep;
+  els.trackGrid.hidden = !practiceStep;
+  els.modeGrid.hidden = !practiceStep;
+  els.startButton.hidden = !practiceStep;
+  if (state.currentScreen === "home") {
+    els.backButton.hidden = !practiceStep;
+  }
+  if (els.selectedSubjectLabel) {
+    els.selectedSubjectLabel.textContent = SUBJECTS[state.selectedSubject].label;
+  }
   els.subjectButtons.forEach((button) => {
     button.classList.toggle("selected", normalizeSubject(button.dataset.subject) === state.selectedSubject);
   });
   els.modePanels.forEach((panel) => {
-    panel.hidden = normalizeSubject(panel.dataset.subjectPanel) !== state.selectedSubject;
+    panel.hidden = !practiceStep || normalizeSubject(panel.dataset.subjectPanel) !== state.selectedSubject;
   });
   if (els.homeSubtitle) {
-    els.homeSubtitle.textContent = SUBJECTS[state.selectedSubject].hero;
+    els.homeSubtitle.textContent = practiceStep ? SUBJECTS[state.selectedSubject].hero : "בחר נושא · ואז נכנסים לרודה";
   }
 }
 
@@ -1406,7 +1462,7 @@ function showScreen(name) {
   els.homeScreen.classList.toggle("active", name === "home");
   els.gameScreen.classList.toggle("active", name === "game");
   els.finishScreen.classList.toggle("active", name === "finish");
-  els.backButton.hidden = name === "home";
+  els.backButton.hidden = name === "home" && state.homeStep !== "practice";
   if (name === "home") {
     els.finishTitle.textContent = "רודה נסגרה";
     els.finishSecondStatLabel.textContent = "רצף";
@@ -1414,6 +1470,7 @@ function showScreen(name) {
     els.scorePill.hidden = true;
     els.timerPill.hidden = true;
     els.coachRow.hidden = false;
+    renderSubjectSelection();
   }
   requestAnimationFrame(() => {
     resizeCanvas(els.homeCapoeiraCanvas);
@@ -1425,6 +1482,7 @@ function showScreen(name) {
 function startSession(mode) {
   clearChampionshipTimer();
   state.activeChampionship = null;
+  state.homeStep = "practice";
   state.selectedMode = normalizeMode(mode);
   state.selectedSubject = modeSubject(state.selectedMode);
   state.selectedTrack = normalizeTrack(state.selectedTrack);
@@ -1454,6 +1512,7 @@ function startChampionship(id) {
   if (!championship) return;
   clearChampionshipTimer();
   state.activeChampionship = championship;
+  state.homeStep = "practice";
   state.selectedMode = normalizeMode(championship.mode);
   state.selectedSubject = modeSubject(state.selectedMode);
   state.selectedTrack = "championship";
@@ -3872,7 +3931,7 @@ function drawBurst() {
 function registerServiceWorker() {
   if (!("serviceWorker" in navigator)) return;
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./service-worker.js?v=40").catch(() => {});
+    navigator.serviceWorker.register("./service-worker.js?v=41").catch(() => {});
   });
 }
 

@@ -8,11 +8,11 @@
       name="description"
       content="Darmon Capoeira - משחק קפוארה קצר לתרגול לוח הכפל, פעולות חשבון, שברים ועשרוניים."
     />
-    <link rel="manifest" href="manifest.webmanifest?v=40" />
+    <link rel="manifest" href="manifest.webmanifest?v=41" />
     <link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="assets/icon-192.png" />
     <title>Darmon Capoeira</title>
-    <link rel="stylesheet" href="styles.css?v=40" />
+    <link rel="stylesheet" href="styles.css?v=41" />
   </head>
   <body>
     <div id="app" class="shell">
@@ -117,18 +117,7 @@
             </button>
           </div>
 
-          <div class="track-grid" aria-label="בחירת מסלול">
-            <button class="track-card selected" type="button" data-track="regular">
-              <strong>רודה מלאה</strong>
-              <span>18 שאלות · פרסי וידאו</span>
-            </button>
-            <button class="track-card" type="button" data-track="fast">
-              <strong>מסלול מהיר</strong>
-              <span>15 שאלות · בלי וידאו</span>
-            </button>
-          </div>
-
-          <div class="subject-grid" aria-label="בחירת תחום">
+          <div class="subject-grid" id="subjectGrid" aria-label="בחירת תחום">
             <button class="subject-card selected" type="button" data-subject="multiplication">
               <strong>לוח הכפל</strong>
               <span>בוסים וכפולות</span>
@@ -143,7 +132,28 @@
             </button>
           </div>
 
-          <div class="mode-grid" aria-label="בחירת אימון">
+          <div class="selected-subject-panel" id="selectedSubjectPanel" aria-label="נושא נבחר" hidden>
+            <div>
+              <span class="mini-label">נושא</span>
+              <strong id="selectedSubjectLabel">לוח הכפל</strong>
+            </div>
+            <button class="ghost-action compact-change" id="changeSubjectButton" type="button">
+              <span>בחירת נושא</span>
+            </button>
+          </div>
+
+          <div class="track-grid" id="trackGrid" aria-label="בחירת מסלול" hidden>
+            <button class="track-card selected" type="button" data-track="regular">
+              <strong>רודה מלאה</strong>
+              <span>18 שאלות · פרסי וידאו</span>
+            </button>
+            <button class="track-card" type="button" data-track="fast">
+              <strong>מסלול מהיר</strong>
+              <span>15 שאלות · בלי וידאו</span>
+            </button>
+          </div>
+
+          <div class="mode-grid" id="modeGrid" aria-label="בחירת אימון" hidden>
             <div class="mode-panel" data-subject-panel="multiplication">
               <button class="mode-card all-card" type="button" data-mode="all">
                 <span class="mode-number">1-10</span>
@@ -478,6 +488,6 @@
       </dialog>
     </div>
 
-    <script src="app.js?v=40" defer></script>
+    <script src="app.js?v=41" defer></script>
   </body>
 </html>
