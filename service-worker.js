@@ -2,10 +2,10 @@ const CACHE_NAME = "darmon-capoeira-v40";
 const APP_SHELL = [
   "./",
   "./index.html",
-  "./styles.css",
-  "./app.js",
+  "./styles.css?v=40",
+  "./app.js?v=40",
   "./privacy-policy.html",
-  "./manifest.webmanifest",
+  "./manifest.webmanifest?v=40",
   "./assets/abada-reward-videos.json",
   "./assets/icon.svg",
   "./assets/icon-192.png",
