@@ -130,6 +130,21 @@ const ASSISTED_PRAISE = [
   ptPraise("Bora", "בורה, ממשיכים", "יאללה / בוא נמשיך"),
 ];
 
+const FACT_CONTINUE_COPY = [
+  "הבנתי, ממשיכים",
+  "עוד ניסיון קטן",
+  "עכשיו זה יושב",
+  "ממשיכים חזק",
+  "קטן עליך",
+  "בוא ננסה שוב",
+  "סבבה, ממשיכים",
+  "לקחתי את הטיפ",
+  "אני על זה",
+  "הפעם זה נכנס",
+  "צעד צעד",
+  "קדימה לרודה",
+];
+
 function ptPraise(word, spokenWord, meaning) {
   return {
     key: `pt:${word}:${spokenWord}`,
@@ -578,6 +593,7 @@ function bindElements() {
     factDialog: document.getElementById("factDialog"),
     closeFactButton: document.getElementById("closeFactButton"),
     gotItButton: document.getElementById("gotItButton"),
+    gotItButtonLabel: document.getElementById("gotItButtonLabel"),
     factBig: document.getElementById("factBig"),
     factChant: document.getElementById("factChant"),
     factVisual: document.getElementById("factVisual"),
@@ -2664,10 +2680,19 @@ function showFact(fact, isHint, onDone = null) {
   els.factChant.textContent = isHint
     ? fact.memory
     : [fact.chant, fact.memory].filter(Boolean).join(" · ");
+  els.gotItButtonLabel.textContent = nextFactContinueCopy();
   renderFactVisual(fact);
   if (!els.factDialog.open) els.factDialog.showModal();
   const explanation = isHint ? fact.trick?.text || fact.hint || fact.memory : `${fact.speak}. טיפ לזכור: ${fact.memory}`;
   speak(explanation);
+}
+
+function nextFactContinueCopy() {
+  const last = nextFactContinueCopy.last || "";
+  const candidates = FACT_CONTINUE_COPY.filter((copy) => copy !== last);
+  const chosen = candidates[Math.floor(Math.random() * candidates.length)] || FACT_CONTINUE_COPY[0];
+  nextFactContinueCopy.last = chosen;
+  return chosen;
 }
 
 function closeFact() {
@@ -3958,7 +3983,7 @@ function drawBurst() {
 function registerServiceWorker() {
   if (!("serviceWorker" in navigator)) return;
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./service-worker.js?v=43").catch(() => {});
+    navigator.serviceWorker.register("./service-worker.js?v=44").catch(() => {});
   });
 }
 
