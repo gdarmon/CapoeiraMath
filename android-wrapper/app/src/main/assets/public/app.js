@@ -10,8 +10,8 @@ const REWARD_CLIP_TARGET = 300;
 const ABADA_REWARD_LIBRARY_PATH = "assets/abada-reward-videos.json";
 const DEFAULT_TRACK = "regular";
 const CHAMPIONSHIP_SURPRISE_INTERVAL = 3;
-const CORD_PROMOTION_ACCURACY = 70;
-const ADVANCED_CORD_PROMOTION_ACCURACY = 85;
+const CORD_PROMOTION_ACCURACY = 75;
+const CORD_PROMOTION_STAMPS = 2;
 const SESSION_TRACKS = {
   regular: {
     label: "רודה מלאה",
@@ -1169,13 +1169,11 @@ function cordIndexForXp(xp) {
 }
 
 function stampsRequiredForCord(cord) {
-  if (cord.xp <= cordXp("קצוות כחולים")) return 2;
-  if (cord.xp <= cordXp("כתום מלא")) return 3;
-  return 4;
+  return CORD_PROMOTION_STAMPS;
 }
 
 function accuracyRequiredForCord(cord) {
-  return cord.xp >= cordXp("כחול מלא") ? ADVANCED_CORD_PROMOTION_ACCURACY : CORD_PROMOTION_ACCURACY;
+  return CORD_PROMOTION_ACCURACY;
 }
 
 function stampProgressLabel(stamps = state.storage.cordStamps, cord = getCord()) {
@@ -3983,7 +3981,7 @@ function drawBurst() {
 function registerServiceWorker() {
   if (!("serviceWorker" in navigator)) return;
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./service-worker.js?v=44").catch(() => {});
+    navigator.serviceWorker.register("./service-worker.js?v=45").catch(() => {});
   });
 }
 
