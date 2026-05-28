@@ -208,11 +208,13 @@ const TEACHER_SKINS = [
     shirt: ["#fff3b6", "#f5c24b", "#d88c2d"],
     pants: "#fff9ee",
     pantsAlt: "#f4eedf",
+    sprite: "assets/characters/capoeira-classic.png",
+    spriteScale: 0.84,
   },
   {
     id: "bananera",
     name: "בננרה",
-    role: "בחורה",
+    role: "מורה · בחורה",
     unlockXp: TEACHER_SKIN_UNLOCKS.bananera,
     skinTone: "#c9875c",
     skinShadow: "#925235",
@@ -222,11 +224,13 @@ const TEACHER_SKINS = [
     shirt: ["#fff9ee", "#47b56c", "#f5c24b"],
     pants: "#fffaf0",
     pantsAlt: "#f2eadb",
+    sprite: "assets/characters/teacher-bananera.png",
+    spriteScale: 0.8,
   },
   {
     id: "bateba",
     name: "בטהבה",
-    role: "בחורה",
+    role: "מורה · בחורה",
     unlockXp: TEACHER_SKIN_UNLOCKS.bateba,
     skinTone: "#b66d4d",
     skinShadow: "#7d3f2e",
@@ -236,11 +240,13 @@ const TEACHER_SKINS = [
     shirt: ["#48c7d8", "#fff9ee", "#f18345"],
     pants: "#f8f4e7",
     pantsAlt: "#e8dcc8",
+    sprite: "assets/characters/teacher-bateba.png",
+    spriteScale: 0.76,
   },
   {
     id: "vesoura",
     name: "וסורה",
-    role: "בחור",
+    role: "מורה · בחור",
     unlockXp: TEACHER_SKIN_UNLOCKS.vesoura,
     skinTone: "#d49467",
     skinShadow: "#9d5c3f",
@@ -250,6 +256,8 @@ const TEACHER_SKINS = [
     shirt: ["#e65f55", "#f5c24b", "#fff9ee"],
     pants: "#fff9ee",
     pantsAlt: "#efe7d8",
+    sprite: "assets/characters/teacher-vesoura.png",
+    spriteScale: 0.78,
   },
 ];
 
@@ -453,6 +461,7 @@ const INLINE_REWARD_VIDEO_IDS = new Set(
 const CAPOEIRA_REWARD_LIMIT = Math.max(0, REWARD_CLIP_TARGET - INLINE_REWARD_VIDEO_IDS.size);
 
 const FACTS = buildFacts();
+const skinSpriteCache = new Map();
 
 const state = {
   homeStep: "subjects",
@@ -524,6 +533,7 @@ const els = {};
 
 document.addEventListener("DOMContentLoaded", () => {
   bindElements();
+  preloadSkinSprites();
   applyLaunchMode();
   hydrateHome();
   bindEvents();
@@ -1240,6 +1250,26 @@ function skinById(id) {
   return TEACHER_SKINS.find((skin) => skin.id === id) || TEACHER_SKINS[0];
 }
 
+function preloadSkinSprites() {
+  TEACHER_SKINS.forEach((skin) => skinSpriteFor(skin));
+}
+
+function skinSpriteFor(skin) {
+  if (!skin?.sprite) return null;
+  let image = skinSpriteCache.get(skin.sprite);
+  if (!image) {
+    image = new Image();
+    image.decoding = "async";
+    image.src = skin.sprite;
+    skinSpriteCache.set(skin.sprite, image);
+  }
+  return image;
+}
+
+function spriteReady(image) {
+  return Boolean(image?.complete && image.naturalWidth > 0);
+}
+
 function unlockedTeacherSkins(xp = state.storage.xp) {
   return TEACHER_SKINS.filter((skin) => skin.id !== DEFAULT_SKIN_ID && skin.unlockXp <= xp);
 }
@@ -1311,8 +1341,8 @@ function renderSkinChoices() {
 
     const canvas = document.createElement("canvas");
     canvas.className = "skin-preview";
-    canvas.width = 180;
-    canvas.height = 160;
+    canvas.width = 150;
+    canvas.height = 190;
 
     const name = document.createElement("strong");
     name.textContent = skin.name;
@@ -1406,7 +1436,14 @@ function drawSkinPreview(canvas, skin) {
   glow.addColorStop(1, "rgba(21, 19, 19, 0)");
   ctx.fillStyle = glow;
   ctx.fillRect(0, 0, width, height);
-  drawFighter(ctx, width, height, "ginga", 0.5, performance.now(), skin);
+  const sprite = skinSpriteFor(skin);
+  if (!spriteReady(sprite)) {
+    sprite?.addEventListener("load", () => drawSkinPreview(canvas, skin), { once: true });
+  }
+  drawFighter(ctx, width, height, "ginga", 0.5, performance.now(), {
+    ...skin,
+    spriteScale: (skin.spriteScale || 0.82) * 1.34,
+  });
 }
 
 function renderToggles() {
@@ -3464,6 +3501,115 @@ function drawMoveTrail(ctx, width, height, name, rawT, now) {
 }
 
 function drawFighter(ctx, width, height, name, rawT, now, skin = activeSkin()) {
+  const sprite = skinSpriteFor(skin);
+  if (spriteReady(sprite)) {
+    drawSpriteFighter(ctx, width, height, name, rawT, now, skin, sprite);
+    return;
+  }
+
+  drawVectorFighter(ctx, width, height, name, rawT, now, skin);
+}
+
+function drawSpriteFighter(ctx, width, height, name, rawT, now, skin, sprite) {
+  const cx = width / 2;
+  const cy = height * 0.57;
+  const size = Math.min(width, height);
+  const floorY = cy + size * 0.31;
+  const drawHeight = size * (skin.spriteScale || 0.82);
+  const drawWidth = drawHeight * (sprite.naturalWidth / sprite.naturalHeight);
+  const motion = spriteMotion(name, rawT, now);
+
+  ctx.save();
+  ctx.translate(cx, floorY);
+
+  ctx.save();
+  ctx.globalAlpha = 0.34;
+  ctx.fillStyle = "#000";
+  ctx.beginPath();
+  ctx.ellipse(motion.x * 0.45, 4, drawWidth * 0.42, size * 0.06, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  const trailSteps = name === "ginga" ? [] : name === "ginga-pop" ? [0.13] : [0.22, 0.12];
+  for (const step of trailSteps) {
+    const ghost = spriteMotion(name, clamp(rawT - step, 0, 1), now - step * 700);
+    drawSpriteImage(ctx, sprite, drawWidth, drawHeight, ghost, 0.14);
+  }
+
+  drawSpriteImage(ctx, sprite, drawWidth, drawHeight, motion, 1);
+  ctx.restore();
+}
+
+function spriteMotion(name, rawT, now) {
+  const t = easeInOut(clamp(rawT, 0, 1));
+  const sway = Math.sin(now / 220);
+  const motion = {
+    x: sway * 7,
+    y: -Math.abs(Math.sin(now / 260)) * 5,
+    rotation: sway * 0.045,
+    scale: 1,
+    scaleX: 1,
+    scaleY: 1,
+    facing: sway < 0 ? -1 : 1,
+  };
+
+  if (name === "meia") {
+    const kick = Math.sin(Math.PI * t);
+    motion.x = lerp(-18, 20, t);
+    motion.y = -18 * kick;
+    motion.rotation = lerp(-0.12, 0.18, t) + Math.sin(Math.PI * 2 * t) * 0.12;
+    motion.scale = 1 + kick * 0.05;
+    motion.facing = t > 0.5 ? -1 : 1;
+  } else if (name === "armada") {
+    const spin = Math.sin(Math.PI * 2 * t);
+    const lift = Math.sin(Math.PI * t);
+    motion.x = Math.sin(Math.PI * 2 * t) * 18;
+    motion.y = -15 * lift;
+    motion.rotation = spin * 0.17;
+    motion.scale = 1 + lift * 0.06;
+    motion.facing = Math.cos(Math.PI * 2 * t) < 0 ? -1 : 1;
+  } else if (name === "au") {
+    const lift = Math.sin(Math.PI * t);
+    motion.x = lerp(-58, 58, t);
+    motion.y = -44 * lift;
+    motion.rotation = lerp(-0.35, Math.PI * 2 - 0.35, t);
+    motion.scale = 0.96 + lift * 0.08;
+    motion.scaleY = 1.05;
+    motion.facing = 1;
+  } else if (name === "esquiva") {
+    const low = Math.sin(Math.PI * t);
+    motion.x = -22 * low;
+    motion.y = 24 * low;
+    motion.rotation = -0.24 * low;
+    motion.scaleX = 1.08;
+    motion.scaleY = 1 - low * 0.16;
+    motion.facing = 1;
+  } else if (name === "ginga-pop") {
+    const hop = Math.sin(Math.PI * t);
+    motion.x = Math.sin(Math.PI * 2 * t) * 10;
+    motion.y = -32 * hop;
+    motion.rotation = Math.sin(Math.PI * 2 * t) * 0.08;
+    motion.scale = 1 + hop * 0.08;
+    motion.facing = Math.sin(Math.PI * 2 * t) < 0 ? -1 : 1;
+  }
+
+  return motion;
+}
+
+function drawSpriteImage(ctx, sprite, drawWidth, drawHeight, motion, alpha) {
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.translate(motion.x, motion.y);
+  ctx.rotate(motion.rotation);
+  ctx.scale(motion.facing * motion.scale * motion.scaleX, motion.scale * motion.scaleY);
+  if (alpha < 1) {
+    ctx.filter = "blur(0.5px)";
+  }
+  ctx.drawImage(sprite, -drawWidth / 2, -drawHeight, drawWidth, drawHeight);
+  ctx.restore();
+}
+
+function drawVectorFighter(ctx, width, height, name, rawT, now, skin = activeSkin()) {
   const cx = width / 2;
   const cy = height * 0.57;
   const scale = Math.min(width, height) / 250;
@@ -3981,7 +4127,7 @@ function drawBurst() {
 function registerServiceWorker() {
   if (!("serviceWorker" in navigator)) return;
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./service-worker.js?v=45").catch(() => {});
+    navigator.serviceWorker.register("./service-worker.js?v=46").catch(() => {});
   });
 }
 

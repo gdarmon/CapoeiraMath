@@ -1714,7 +1714,7 @@ h2 {
 }
 
 .skin-choice {
-  min-height: 184px;
+  min-height: 218px;
   padding: 8px;
   border-radius: var(--radius);
   border: 2px solid rgba(255, 249, 238, 0.13);
@@ -1737,8 +1737,8 @@ h2 {
 
 .skin-preview {
   width: 100%;
-  max-width: 118px;
-  aspect-ratio: 9 / 8;
+  max-width: 132px;
+  aspect-ratio: 4 / 5;
   display: block;
 }
 
