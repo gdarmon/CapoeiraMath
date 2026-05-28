@@ -885,6 +885,56 @@ h1 {
   color: var(--leaf);
 }
 
+.long-layout-panel {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border-radius: var(--radius);
+  background: rgba(255, 249, 238, 0.08);
+  border: 1px solid rgba(255, 249, 238, 0.14);
+}
+
+.long-layout-panel[hidden] {
+  display: none;
+}
+
+.long-layout-buttons {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.long-layout-button {
+  min-height: 62px;
+  padding: 8px;
+  border-radius: 10px;
+  border: 2px solid rgba(255, 249, 238, 0.12);
+  background:
+    linear-gradient(145deg, rgba(255, 249, 238, 0.12), rgba(255, 249, 238, 0.04)),
+    #221f1c;
+  color: var(--ink);
+  display: grid;
+  gap: 3px;
+  justify-items: center;
+  align-content: center;
+}
+
+.long-layout-button.selected {
+  border-color: var(--aqua);
+  box-shadow: 0 0 0 3px rgba(72, 199, 216, 0.14);
+}
+
+.long-layout-button strong {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.long-layout-button span {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 850;
+}
+
 .primary-action,
 .ghost-action {
   min-height: 56px;
@@ -1136,6 +1186,54 @@ h1 {
 
 .question-line.long-question {
   font-size: clamp(1.9rem, 8.5vw, 3rem);
+}
+
+.question-line.vertical-question {
+  font-size: clamp(2rem, 8vw, 3rem);
+}
+
+.vertical-problem {
+  min-width: min(72vw, 330px);
+  display: inline-grid;
+  gap: 2px;
+  padding-inline: 18px;
+  direction: ltr;
+  font-variant-numeric: tabular-nums;
+}
+
+.vertical-problem__row {
+  display: grid;
+  grid-template-columns: 1.2em 1fr;
+  align-items: end;
+  justify-items: end;
+  gap: 12px;
+}
+
+.vertical-problem__row:first-child {
+  grid-template-columns: 1.2em 1fr;
+}
+
+.vertical-problem__row:first-child::before {
+  content: "";
+}
+
+.vertical-problem__operator {
+  color: var(--gold);
+  font-weight: 950;
+}
+
+.vertical-problem__line {
+  display: block;
+  border-top: 4px solid var(--ink);
+  opacity: 0.92;
+  margin-top: 2px;
+}
+
+.vertical-problem__answer-cue {
+  justify-self: end;
+  color: var(--aqua);
+  font-size: 0.82em;
+  line-height: 1.05;
 }
 
 .coach-hint {

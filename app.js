@@ -319,6 +319,12 @@ const ARITHMETIC_MODES = {
   "arith-mul": { label: "כפל ארוך" },
   "arith-div": { label: "חילוק ארוך" },
 };
+const LONG_LAYOUT_MODES = new Set(["arith-mul", "arith-div"]);
+const DEFAULT_LONG_LAYOUT = "horizontal";
+const LONG_LAYOUTS = {
+  horizontal: { label: "מאוזן", detail: "בשורה אחת" },
+  vertical: { label: "מאונך", detail: "טור-טור" },
+};
 const FRACTION_MODES = {
   "frac-compare": { label: "השוואת שברים" },
   "frac-add": { label: "חיבור שברים" },
@@ -569,6 +575,8 @@ function bindElements() {
     subjectButtons: Array.from(document.querySelectorAll(".subject-card")),
     trackGrid: document.getElementById("trackGrid"),
     trackCards: Array.from(document.querySelectorAll(".track-card")),
+    longLayoutPanel: document.getElementById("longLayoutPanel"),
+    longLayoutButtons: Array.from(document.querySelectorAll(".long-layout-button")),
     championshipPanel: document.getElementById("championshipPanel"),
     championshipTitle: document.getElementById("championshipTitle"),
     championshipMeta: document.getElementById("championshipMeta"),
@@ -678,6 +686,16 @@ function bindEvents() {
     button.addEventListener("click", () => {
       state.selectedTrack = normalizeTrack(button.dataset.track);
       renderTrackSelection();
+      tap();
+      playTap();
+    });
+  });
+
+  els.longLayoutButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      state.storage.longLayout = normalizeLongLayout(button.dataset.layout);
+      saveStorage();
+      renderLongLayoutSelection();
       tap();
       playTap();
     });
@@ -831,6 +849,10 @@ function modeSubject(mode) {
 
 function normalizeTrack(track) {
   return SESSION_TRACKS[track] ? track : DEFAULT_TRACK;
+}
+
+function normalizeLongLayout(layout) {
+  return LONG_LAYOUTS[layout] ? layout : DEFAULT_LONG_LAYOUT;
 }
 
 function sessionTrack() {
@@ -1032,6 +1054,7 @@ function loadStorage() {
     sessions: 0,
     sound: true,
     voice: true,
+    longLayout: DEFAULT_LONG_LAYOUT,
     selectedSkin: DEFAULT_SKIN_ID,
     lastSkinPromptXp: 0,
     cordStamps: 0,
@@ -1058,6 +1081,7 @@ function loadStorage() {
     merged.championships = { ...defaults.championships, ...parsed.championships };
     const storedSkin = skinById(merged.selectedSkin);
     merged.selectedSkin = storedSkin.unlockXp <= merged.xp ? storedSkin.id : DEFAULT_SKIN_ID;
+    merged.longLayout = normalizeLongLayout(merged.longLayout);
     merged.lastSkinPromptXp = Number(merged.lastSkinPromptXp) || 0;
     merged.cordStamps = Math.max(0, Number(merged.cordStamps) || 0);
     return merged;
@@ -1500,11 +1524,27 @@ function renderModeSelection() {
   els.modeCards.forEach((button) => {
     button.classList.toggle("selected", normalizeMode(button.dataset.mode) === state.selectedMode);
   });
+  renderLongLayoutSelection();
 }
 
 function renderTrackSelection() {
   els.trackCards.forEach((button) => {
     button.classList.toggle("selected", normalizeTrack(button.dataset.track) === state.selectedTrack);
+  });
+}
+
+function renderLongLayoutSelection() {
+  if (!els.longLayoutPanel) return;
+  const showPanel =
+    state.homeStep === "practice" &&
+    state.selectedSubject === "arithmetic" &&
+    LONG_LAYOUT_MODES.has(state.selectedMode);
+  els.longLayoutPanel.hidden = !showPanel;
+  const selectedLayout = normalizeLongLayout(state.storage.longLayout);
+  els.longLayoutButtons.forEach((button) => {
+    const active = normalizeLongLayout(button.dataset.layout) === selectedLayout;
+    button.classList.toggle("selected", active);
+    button.setAttribute("aria-pressed", String(active));
   });
 }
 
@@ -1721,6 +1761,8 @@ function arithmeticMultiplicationFact(mode) {
   return makePracticeFact(mode, {
     question: `${formatNumber(a)} × ${formatNumber(b)}`,
     answer,
+    operands: [a, b],
+    operator: "×",
     memory: "כפל ארוך: כופלים כל ספרה, מזיזים שורה אחת שמאלה, ואז מחברים.",
     hint: `פרק את ${b}: כפול עשרות ועוד כפול אחדות.`,
     visualSteps: [formatNumber(a), "×", formatNumber(b), "=", formatNumber(answer)],
@@ -1734,6 +1776,8 @@ function arithmeticDivisionFact(mode) {
   return makePracticeFact(mode, {
     question: `${formatNumber(dividend)} ÷ ${formatNumber(divisor)}`,
     answer: quotient,
+    operands: [dividend, divisor],
+    operator: "÷",
     memory: "חילוק ארוך: כמה נכנס, כופלים, מחסרים ומורידים את הספרה הבאה.",
     hint: `אפשר לחשוב הפוך: איזה מספר כפול ${divisor} נותן ${formatNumber(dividend)}?`,
     visualSteps: [formatNumber(dividend), "÷", formatNumber(divisor), "=", formatNumber(quotient)],
@@ -1888,6 +1932,8 @@ function makePracticeFact(mode, config) {
     kind: modeSubject(mode),
     question,
     answer,
+    operands: config.operands,
+    operator: config.operator,
     answerText: answerLabel,
     options: config.options,
     factLine: config.factLine || `${question} = ${answerLabel}`,
@@ -2045,9 +2091,7 @@ function nextQuestion() {
   if (inChampionship) {
     renderChampionshipScore();
   }
-  const questionLabel = formatQuestion(item);
-  els.questionText.textContent = questionLabel;
-  els.questionText.classList.toggle("long-question", questionLabel.length >= 12);
+  renderQuestion(item);
   hideCoachHint();
   renderAnswers(item);
   renderProgress();
@@ -2066,6 +2110,63 @@ function formatQuestion(item) {
   const first = item.flipped ? item.fact.b : item.fact.a;
   const second = item.flipped ? item.fact.a : item.fact.b;
   return `${first} × ${second}`;
+}
+
+function renderQuestion(item) {
+  const questionLabel = formatQuestion(item);
+  const vertical = shouldShowVerticalQuestion(item.fact);
+  els.questionText.replaceChildren();
+  els.questionText.classList.toggle("long-question", !vertical && questionLabel.length >= 12);
+  els.questionText.classList.toggle("vertical-question", vertical);
+
+  if (!vertical) {
+    els.questionText.textContent = questionLabel;
+    return;
+  }
+
+  els.questionText.append(createVerticalQuestion(item.fact));
+}
+
+function shouldShowVerticalQuestion(fact) {
+  return (
+    LONG_LAYOUT_MODES.has(fact?.mode) &&
+    normalizeLongLayout(state.storage.longLayout) === "vertical" &&
+    Array.isArray(fact.operands) &&
+    fact.operands.length === 2 &&
+    fact.operator
+  );
+}
+
+function createVerticalQuestion(fact) {
+  const [top, bottom] = fact.operands.map(formatNumber);
+  const wrap = document.createElement("span");
+  wrap.className = `vertical-problem vertical-problem--${fact.mode === "arith-div" ? "division" : "multiplication"}`;
+
+  const topRow = document.createElement("span");
+  topRow.className = "vertical-problem__row";
+  topRow.textContent = top;
+
+  const bottomRow = document.createElement("span");
+  bottomRow.className = "vertical-problem__row vertical-problem__row--operator";
+
+  const operator = document.createElement("span");
+  operator.className = "vertical-problem__operator";
+  operator.textContent = fact.operator;
+
+  const bottomNumber = document.createElement("span");
+  bottomNumber.textContent = bottom;
+
+  bottomRow.append(operator, bottomNumber);
+
+  const line = document.createElement("span");
+  line.className = "vertical-problem__line";
+
+  const answerCue = document.createElement("span");
+  answerCue.className = "vertical-problem__answer-cue";
+  answerCue.textContent = "?";
+
+  wrap.append(topRow, bottomRow, line, answerCue);
+  return wrap;
 }
 
 function renderAnswers(item) {
@@ -4127,7 +4228,7 @@ function drawBurst() {
 function registerServiceWorker() {
   if (!("serviceWorker" in navigator)) return;
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./service-worker.js?v=46").catch(() => {});
+    navigator.serviceWorker.register("./service-worker.js?v=47").catch(() => {});
   });
 }
 
