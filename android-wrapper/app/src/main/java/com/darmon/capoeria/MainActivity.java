@@ -2,6 +2,7 @@ package com.darmon.capoeria;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.content.IntentSender;
 import android.graphics.Insets;
 import android.net.Uri;
 import android.os.Build;
@@ -20,6 +21,11 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
 import android.widget.Toast;
+import com.google.android.play.core.appupdate.AppUpdateInfo;
+import com.google.android.play.core.appupdate.AppUpdateManager;
+import com.google.android.play.core.appupdate.AppUpdateManagerFactory;
+import com.google.android.play.core.install.model.AppUpdateType;
+import com.google.android.play.core.install.model.UpdateAvailability;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Locale;
@@ -27,6 +33,9 @@ import java.util.Locale;
 public final class MainActivity extends Activity {
     private static final String ORIGIN = "https://darmon.local";
     private static final String ASSET_ROOT = "public/";
+    private static final String PROGRESS_PREFERENCES = "darmon_progress";
+    private static final String PROGRESS_KEY = "progress_json";
+    private static final int UPDATE_REQUEST_CODE = 4201;
     private static final int NIGHT = 0xFF151313;
     private FrameLayout rootView;
     private WebView webView;
@@ -35,6 +44,8 @@ public final class MainActivity extends Activity {
     private boolean hebrewTtsAvailable;
     private boolean ttsWarningShown;
     private String pendingSpeech;
+    private AppUpdateManager appUpdateManager;
+    private AppUpdateInfo pendingAppUpdate;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -75,7 +86,10 @@ public final class MainActivity extends Activity {
 
         webView.addJavascriptInterface(new TtsBridge(), "AndroidTts");
         webView.addJavascriptInterface(new LinkBridge(), "AndroidLinks");
+        webView.addJavascriptInterface(new ProgressBridge(), "AndroidProgress");
+        webView.addJavascriptInterface(new UpdateBridge(), "AndroidUpdates");
         webView.setWebViewClient(new LocalAssetClient());
+        appUpdateManager = AppUpdateManagerFactory.create(this);
         rootView.addView(
                 webView,
                 new FrameLayout.LayoutParams(
@@ -83,6 +97,14 @@ public final class MainActivity extends Activity {
                         ViewGroup.LayoutParams.MATCH_PARENT));
         setContentView(rootView);
         webView.loadUrl(ORIGIN + "/");
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (appUpdateManager != null) {
+            checkForAppUpdate(false);
+        }
     }
 
     private void configureSystemBars() {
@@ -197,6 +219,97 @@ public final class MainActivity extends Activity {
                 }
             });
         }
+    }
+
+    private final class ProgressBridge {
+        @JavascriptInterface
+        public String load() {
+            return getSharedPreferences(PROGRESS_PREFERENCES, MODE_PRIVATE)
+                    .getString(PROGRESS_KEY, null);
+        }
+
+        @JavascriptInterface
+        public void save(String progressJson) {
+            if (progressJson == null || progressJson.length() > 2_000_000) {
+                return;
+            }
+            getSharedPreferences(PROGRESS_PREFERENCES, MODE_PRIVATE)
+                    .edit()
+                    .putString(PROGRESS_KEY, progressJson)
+                    .commit();
+        }
+
+        @JavascriptInterface
+        public void clear() {
+            getSharedPreferences(PROGRESS_PREFERENCES, MODE_PRIVATE)
+                    .edit()
+                    .remove(PROGRESS_KEY)
+                    .commit();
+        }
+    }
+
+    private final class UpdateBridge {
+        @JavascriptInterface
+        public void check() {
+            runOnUiThread(() -> checkForAppUpdate(false));
+        }
+
+        @JavascriptInterface
+        public void install() {
+            runOnUiThread(() -> {
+                if (pendingAppUpdate != null) {
+                    startImmediateUpdate(pendingAppUpdate);
+                    return;
+                }
+                checkForAppUpdate(true);
+            });
+        }
+    }
+
+    private void checkForAppUpdate(boolean startWhenAvailable) {
+        if (appUpdateManager == null) {
+            return;
+        }
+        appUpdateManager
+                .getAppUpdateInfo()
+                .addOnSuccessListener(appUpdateInfo -> {
+                    int availability = appUpdateInfo.updateAvailability();
+                    if (availability == UpdateAvailability.DEVELOPER_TRIGGERED_UPDATE_IN_PROGRESS) {
+                        startImmediateUpdate(appUpdateInfo);
+                        return;
+                    }
+                    if (availability == UpdateAvailability.UPDATE_AVAILABLE
+                            && appUpdateInfo.isUpdateTypeAllowed(AppUpdateType.IMMEDIATE)) {
+                        pendingAppUpdate = appUpdateInfo;
+                        if (startWhenAvailable) {
+                            startImmediateUpdate(appUpdateInfo);
+                        } else {
+                            notifyWebUpdateAvailable();
+                        }
+                    }
+                });
+    }
+
+    private void startImmediateUpdate(AppUpdateInfo appUpdateInfo) {
+        try {
+            pendingAppUpdate = null;
+            appUpdateManager.startUpdateFlowForResult(
+                    appUpdateInfo,
+                    AppUpdateType.IMMEDIATE,
+                    this,
+                    UPDATE_REQUEST_CODE);
+        } catch (IntentSender.SendIntentException exception) {
+            Toast.makeText(this, "לא הצלחתי להתחיל את העדכון", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void notifyWebUpdateAvailable() {
+        if (webView == null) {
+            return;
+        }
+        webView.evaluateJavascript(
+                "window.dispatchEvent(new Event('android-update-available'))",
+                null);
     }
 
     private final class LocalAssetClient extends WebViewClient {

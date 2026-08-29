@@ -8,11 +8,11 @@
       name="description"
       content="Darmon Capoeira - משחק קפוארה קצר לתרגול לוח הכפל, פעולות חשבון, שברים ועשרוניים."
     />
-    <link rel="manifest" href="manifest.webmanifest?v=48" />
+    <link rel="manifest" href="manifest.webmanifest?v=53" />
     <link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="assets/icon-192.png" />
     <title>Darmon Capoeira</title>
-    <link rel="stylesheet" href="styles.css?v=48" />
+    <link rel="stylesheet" href="styles.css?v=53" />
   </head>
   <body>
     <div id="app" class="shell">
@@ -32,6 +32,22 @@
         </div>
 
         <div class="top-actions">
+          <button
+            class="icon-button update-button"
+            id="updateButton"
+            type="button"
+            aria-label="עדכון חדש זמין"
+            title="עדכון חדש זמין"
+            hidden
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M20 11a8 8 0 10-2.3 5.7" />
+              <path d="M20 4v7h-7" />
+              <path d="M12 8v7" />
+              <path d="M9 12l3 3 3-3" />
+            </svg>
+            <span class="update-dot" aria-hidden="true"></span>
+          </button>
           <button class="icon-button" id="installButton" type="button" aria-label="התקנה" hidden>
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M12 3v11" />
@@ -149,8 +165,20 @@
             </button>
             <button class="track-card" type="button" data-track="fast">
               <strong>מסלול מהיר</strong>
-              <span>15 שאלות · בלי וידאו</span>
+              <span>15 שאלות · אוספים כלי נגינה</span>
             </button>
+          </div>
+
+          <div class="fast-instrument-panel" id="fastInstrumentPanel" aria-label="אוסף כלי נגינה" hidden>
+            <div class="fast-instrument-head">
+              <div>
+                <span class="mini-label">אוסף המסלול המהיר</span>
+                <strong id="fastInstrumentProgress">0/8 חותמות</strong>
+              </div>
+              <span id="fastInstrumentNext">אגוגו וקויה נפתחים ב־2</span>
+            </div>
+            <div class="fast-instrument-list" id="fastInstrumentList"></div>
+            <span class="fast-instrument-help">לחצו על כלי פתוח כדי לבחור מה יופיע באנימציה</span>
           </div>
 
           <div class="mode-grid" id="modeGrid" aria-label="בחירת אימון" hidden>
@@ -297,6 +325,20 @@
               <span id="modeLabel">רודה</span>
               <strong id="questionCounter">1/18</strong>
             </div>
+            <button
+              class="ghost-action exercise-help-button"
+              id="exerciseHelpButton"
+              type="button"
+              aria-expanded="false"
+              aria-controls="exerciseHelpMenu"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M9.5 9a2.8 2.8 0 115 1.7c-1.5 1-2.5 1.7-2.5 3.3" />
+                <path d="M12 18h.01" />
+                <circle cx="12" cy="12" r="9" />
+              </svg>
+              <span>עזרה</span>
+            </button>
             <div class="streak-pill" id="streakPill">
               <span>רצף</span>
               <strong id="streakLabel">0</strong>
@@ -311,6 +353,30 @@
                 <strong id="timerLabel">15</strong>
               </div>
             </div>
+          </div>
+
+          <div class="exercise-help-menu" id="exerciseHelpMenu" hidden>
+            <button class="exercise-help-option" id="layoutHelpButton" type="button">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M5 7h14" />
+                <path d="M5 12h14" />
+                <path d="M5 17h14" />
+              </svg>
+              <span>
+                <strong id="layoutHelpLabel">הצג במאונך</strong>
+                <small id="layoutHelpDetail">סידור טור־טור</small>
+              </span>
+            </button>
+            <button class="exercise-help-option" id="scratchpadButton" type="button">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 20l4.5-1 10-10a2.1 2.1 0 00-3-3l-10 10L4 20z" />
+                <path d="M13.5 8l3 3" />
+              </svg>
+              <span>
+                <strong>דף טיוטה</strong>
+                <small>כתיבה באצבע וחישובי ביניים</small>
+              </span>
+            </button>
           </div>
 
           <div class="progress-beads" id="progressBeads" aria-hidden="true"></div>
@@ -377,6 +443,54 @@
           </button>
         </section>
       </main>
+
+      <dialog class="scratchpad-dialog" id="scratchpadDialog">
+        <div class="scratchpad-card">
+          <div class="scratchpad-head">
+            <div>
+              <span class="mini-label">עזרה לתרגיל</span>
+              <h2>דף טיוטה</h2>
+            </div>
+            <button
+              class="icon-button close-dialog"
+              id="closeScratchpadButton"
+              type="button"
+              aria-label="סגור טיוטה וחזור לתרגיל"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M6 6l12 12" />
+                <path d="M18 6L6 18" />
+              </svg>
+            </button>
+          </div>
+
+          <div class="scratchpad-sheet">
+            <section class="scratchpad-question-pane" aria-label="התרגיל הנוכחי">
+              <span>התרגיל הנוכחי</span>
+              <strong id="scratchpadQuestion">7 × 8</strong>
+              <small>אפשר לכתוב בצד השני תרגילי עזר ותוצאות ביניים</small>
+            </section>
+            <section class="scratchpad-drawing-pane" aria-label="אזור כתיבה">
+              <canvas id="scratchpadCanvas" aria-label="דף כתיבה חופשית באצבע"></canvas>
+              <span class="scratchpad-placeholder" id="scratchpadPlaceholder">כתבו כאן עם האצבע</span>
+            </section>
+          </div>
+
+          <div class="scratchpad-actions">
+            <button class="ghost-action" id="clearScratchpadButton" type="button">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M3 6h18" />
+                <path d="M8 6V4h8v2" />
+                <path d="M6 6l1 14h10l1-14" />
+              </svg>
+              <span>מחק הכול</span>
+            </button>
+            <button class="primary-action compact" id="doneScratchpadButton" type="button">
+              <span>סיימתי, חזרה לתרגיל</span>
+            </button>
+          </div>
+        </div>
+      </dialog>
 
       <dialog class="fact-dialog" id="factDialog">
         <div class="fact-card">
@@ -502,6 +616,6 @@
       </dialog>
     </div>
 
-    <script src="app.js?v=48" defer></script>
+    <script src="app.js?v=53" defer></script>
   </body>
 </html>

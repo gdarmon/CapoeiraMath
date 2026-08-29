@@ -137,6 +137,36 @@ button:focus-visible {
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
 }
 
+.update-button {
+  position: relative;
+  border-color: rgba(245, 194, 75, 0.7);
+  background: rgba(245, 194, 75, 0.15);
+  color: var(--gold);
+  animation: updateGlow 1.8s ease-in-out infinite;
+}
+
+.update-dot {
+  position: absolute;
+  inset-block-start: 4px;
+  inset-inline-end: 4px;
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--night);
+  border-radius: 50%;
+  background: var(--red);
+  box-shadow: 0 0 0 3px rgba(230, 95, 85, 0.18);
+}
+
+@keyframes updateGlow {
+  0%,
+  100% {
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18), 0 0 0 rgba(245, 194, 75, 0);
+  }
+  50% {
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18), 0 0 0 5px rgba(245, 194, 75, 0.16);
+  }
+}
+
 .icon-button svg,
 .primary-action svg,
 .ghost-action svg {
@@ -693,6 +723,103 @@ h1 {
   line-height: 1.1;
 }
 
+.fast-instrument-panel {
+  display: grid;
+  gap: 10px;
+  margin: -4px 0 12px;
+  padding: 12px;
+  border: 1px solid rgba(245, 194, 75, 0.28);
+  border-radius: var(--radius);
+  background:
+    radial-gradient(circle at 12% 0%, rgba(245, 194, 75, 0.16), transparent 42%),
+    linear-gradient(145deg, rgba(72, 199, 216, 0.13), rgba(71, 181, 108, 0.09)),
+    var(--night-2);
+}
+
+.fast-instrument-head {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: end;
+  gap: 10px;
+}
+
+.fast-instrument-head strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--gold);
+  font-size: 1.15rem;
+}
+
+.fast-instrument-head > span {
+  max-width: 180px;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 850;
+  line-height: 1.15;
+  text-align: left;
+}
+
+.fast-instrument-list {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.fast-instrument-badge {
+  min-height: 52px;
+  padding: 7px 4px;
+  border: 1px solid rgba(255, 249, 238, 0.1);
+  border-radius: 7px;
+  background: rgba(0, 0, 0, 0.16);
+  opacity: 0.58;
+  display: grid;
+  place-content: center;
+  gap: 4px;
+  color: var(--ink);
+  text-align: center;
+}
+
+.fast-instrument-badge:not(:disabled) {
+  cursor: pointer;
+}
+
+.fast-instrument-badge:disabled {
+  cursor: default;
+}
+
+.fast-instrument-badge.unlocked {
+  border-color: rgba(245, 194, 75, 0.58);
+  background: rgba(245, 194, 75, 0.13);
+  opacity: 1;
+}
+
+.fast-instrument-badge.selected {
+  border-color: var(--aqua);
+  background:
+    radial-gradient(circle at 50% 0%, rgba(72, 199, 216, 0.28), transparent 72%),
+    rgba(245, 194, 75, 0.15);
+  box-shadow: 0 0 0 2px rgba(72, 199, 216, 0.2);
+}
+
+.fast-instrument-badge strong {
+  font-size: 0.72rem;
+  line-height: 1.05;
+}
+
+.fast-instrument-badge span {
+  color: var(--muted);
+  font-size: 0.62rem;
+  font-weight: 800;
+}
+
+.fast-instrument-help {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 750;
+  line-height: 1.25;
+  text-align: center;
+}
+
 .subject-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -990,10 +1117,86 @@ h1 {
 
 .game-head {
   display: grid;
-  grid-template-columns: 1fr auto auto;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
   align-items: center;
   gap: 8px;
   margin: 8px 0 10px;
+}
+
+.exercise-help-button {
+  min-height: 48px;
+  padding: 7px 11px;
+  gap: 6px;
+  border-color: rgba(245, 194, 75, 0.32);
+  background: rgba(245, 194, 75, 0.1);
+  color: var(--gold);
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.exercise-help-button svg {
+  width: 20px;
+  height: 20px;
+}
+
+.exercise-help-menu {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: -2px 0 10px;
+  padding: 8px;
+  border: 1px solid rgba(245, 194, 75, 0.28);
+  border-radius: var(--radius);
+  background:
+    linear-gradient(145deg, rgba(245, 194, 75, 0.12), rgba(72, 199, 216, 0.08)),
+    var(--night-2);
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.24);
+}
+
+.exercise-help-option {
+  min-height: 66px;
+  padding: 9px;
+  border: 1px solid rgba(255, 249, 238, 0.14);
+  border-radius: var(--radius);
+  background: rgba(255, 249, 238, 0.07);
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  text-align: right;
+}
+
+.exercise-help-option:active {
+  transform: translateY(1px);
+}
+
+.exercise-help-option svg {
+  width: 27px;
+  height: 27px;
+  fill: none;
+  stroke: var(--aqua);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.exercise-help-option strong,
+.exercise-help-option small {
+  display: block;
+}
+
+.exercise-help-option strong {
+  color: var(--ink);
+  font-size: 0.83rem;
+  line-height: 1.1;
+}
+
+.exercise-help-option small {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.64rem;
+  font-weight: 750;
+  line-height: 1.15;
 }
 
 .round-meta {
@@ -1386,6 +1589,11 @@ h2 {
   font-size: 1.25rem;
 }
 
+.instrument-result-chip strong {
+  direction: rtl;
+  font-size: 1.02rem;
+}
+
 .fact-dialog {
   width: min(92vw, 430px);
   border: 0;
@@ -1398,9 +1606,136 @@ h2 {
 .fact-dialog::backdrop,
 .reward-dialog::backdrop,
 .streak-dialog::backdrop,
-.skin-dialog::backdrop {
+.skin-dialog::backdrop,
+.scratchpad-dialog::backdrop {
   background: rgba(0, 0, 0, 0.72);
   backdrop-filter: blur(10px);
+}
+
+.scratchpad-dialog {
+  width: min(96vw, 900px);
+  height: min(92dvh, 760px);
+  max-width: none;
+  max-height: none;
+  border: 0;
+  padding: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--ink);
+}
+
+.scratchpad-card {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid rgba(255, 249, 238, 0.18);
+  border-radius: 12px;
+  background:
+    radial-gradient(circle at 90% 0%, rgba(245, 194, 75, 0.15), transparent 34%),
+    linear-gradient(145deg, rgba(72, 199, 216, 0.09), rgba(71, 181, 108, 0.06)),
+    #181615;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.56);
+}
+
+.scratchpad-head {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-inline-start: 52px;
+}
+
+.scratchpad-head h2 {
+  margin: 3px 0 0;
+  font-size: 1.45rem;
+}
+
+.scratchpad-sheet {
+  min-height: 0;
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  border: 1px solid rgba(255, 249, 238, 0.17);
+  border-radius: 10px;
+  background: #f7f1df;
+  color: #211a17;
+}
+
+.scratchpad-question-pane {
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 10px;
+  padding: 16px;
+  border-bottom: 3px dashed rgba(33, 26, 23, 0.28);
+  text-align: center;
+}
+
+.scratchpad-question-pane span,
+.scratchpad-question-pane small {
+  color: #6d6257;
+  font-weight: 800;
+}
+
+.scratchpad-question-pane strong {
+  direction: ltr;
+  font-size: clamp(2rem, 10vw, 4rem);
+  line-height: 1;
+  overflow-wrap: anywhere;
+}
+
+.scratchpad-question-pane small {
+  max-width: 310px;
+  font-size: 0.76rem;
+  line-height: 1.25;
+}
+
+.scratchpad-drawing-pane {
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+  background:
+    linear-gradient(rgba(72, 199, 216, 0.15) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(72, 199, 216, 0.15) 1px, transparent 1px),
+    #fffdf5;
+  background-size: 24px 24px;
+}
+
+#scratchpadCanvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  position: absolute;
+  inset: 0;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.scratchpad-placeholder {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: rgba(33, 26, 23, 0.38);
+  font-size: 1rem;
+  font-weight: 900;
+  pointer-events: none;
+}
+
+.scratchpad-actions {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.7fr) minmax(190px, 1.3fr);
+  gap: 8px;
+}
+
+.scratchpad-actions > button {
+  width: 100%;
+  min-height: 50px;
 }
 
 .fact-card {
@@ -1893,6 +2228,15 @@ h2 {
     gap: 6px;
   }
 
+  .exercise-help-button {
+    min-height: 44px;
+    padding-inline: 8px;
+  }
+
+  .exercise-help-button svg {
+    display: none;
+  }
+
   .score-pill,
   .streak-pill {
     min-width: 78px;
@@ -2200,6 +2544,7 @@ h2 {
     grid-template-columns: minmax(410px, 1fr) minmax(430px, 520px);
     grid-template-areas:
       "head head"
+      "help help"
       "progress progress"
       "arena question"
       "arena answers"
@@ -2210,6 +2555,11 @@ h2 {
 
   .game-head {
     grid-area: head;
+    margin: 0;
+  }
+
+  .exercise-help-menu {
+    grid-area: help;
     margin: 0;
   }
 
@@ -2252,6 +2602,16 @@ h2 {
   .coach-row {
     grid-area: coach;
     margin-top: 0;
+  }
+
+  .scratchpad-sheet {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  .scratchpad-question-pane {
+    border-bottom: 0;
+    border-inline-end: 3px dashed rgba(33, 26, 23, 0.28);
   }
 
   .finish-screen.active {

@@ -3,6 +3,9 @@ const FAST_SESSION_LENGTH = 15;
 const ANSWER_OPTION_COUNT = 6;
 const REWARD_SECONDS = 30;
 const STORAGE_KEY = "darmonCapoeira:v1";
+const STORAGE_BACKUP_KEY = "darmonCapoeira:progress-backup:v1";
+const STORAGE_SCHEMA_VERSION = 2;
+const UPDATE_CHECK_INTERVAL_MS = 30 * 60 * 1000;
 const STREAK_MILESTONES = new Set([3, 5, 8, 10, 12, 15, 18]);
 const PRAISE_REPEAT_WINDOW = 10;
 const INSTRUMENT_REWARD_INTERVAL = 3;
@@ -12,6 +15,16 @@ const DEFAULT_TRACK = "regular";
 const CHAMPIONSHIP_SURPRISE_INTERVAL = 3;
 const CORD_PROMOTION_ACCURACY = 75;
 const CORD_PROMOTION_STAMPS = 2;
+const FAST_INSTRUMENTS = [
+  { id: "agogo", name: "אגוגו", stamps: 2, placement: "hand" },
+  { id: "cuia", name: "קויה", stamps: 2, placement: "hand" },
+  { id: "pandeiro", name: "פנדיירו", stamps: 4, placement: "hand" },
+  { id: "atabaque", name: "אטאבקי", stamps: 5, placement: "floor" },
+  { id: "berimbau-viola", name: "בירמבאו ויולה", stamps: 6, placement: "hand" },
+  { id: "berimbau-medio", name: "בירמבאו מדיו", stamps: 7, placement: "hand" },
+  { id: "berimbau-gunga", name: "בירמבאו גונגה", stamps: 8, placement: "hand" },
+];
+const FAST_INSTRUMENT_MAX_STAMPS = Math.max(...FAST_INSTRUMENTS.map((instrument) => instrument.stamps));
 const SESSION_TRACKS = {
   regular: {
     label: "רודה מלאה",
@@ -21,7 +34,7 @@ const SESSION_TRACKS = {
   },
   fast: {
     label: "מסלול מהיר",
-    detail: "15 שאלות · בלי וידאו",
+    detail: "15 שאלות · אוספים כלי נגינה",
     length: FAST_SESSION_LENGTH,
     videos: false,
   },
@@ -73,6 +86,16 @@ const HEB_ONES_WITH_VAV = new Map([
 
 const MOVES = ["ginga-pop", "meia", "au", "esquiva", "armada"];
 
+const BASE_PORTUGUESE_PRAISE = [
+  ptPraise("Boa", "בואה", "יפה / טוב"),
+  ptPraise("Mandou bem", "מנדו בן", "עשית את זה טוב"),
+  ptPraise("Massa", "מסה", "מגניב"),
+  ptPraise("Bora", "בורה", "יאללה / בוא נמשיך"),
+  ptPraise("Show", "שו", "מעולה"),
+  ptPraise("Axé", "אשה", "אנרגיה טובה / ברכה"),
+  ptPraise("Joga bonito", "ז'וגה בוניטו", "תשחק יפה"),
+];
+
 const CLEAN_PRAISE = [
   "בום",
   "אלוף",
@@ -102,13 +125,115 @@ const CLEAN_PRAISE = [
   "זה שלך לגמרי",
   "יאללה ממשיכים",
   "בום חזק",
-  ptPraise("Boa", "בואה", "יפה / טוב"),
-  ptPraise("Mandou bem", "מנדו בן", "עשית את זה טוב"),
-  ptPraise("Massa", "מסה", "מגניב"),
-  ptPraise("Bora", "בורה", "יאללה / בוא נמשיך"),
-  ptPraise("Show", "שו", "מעולה"),
-  ptPraise("Axé", "אשה", "אנרגיה טובה / ברכה"),
-  ptPraise("Joga bonito", "ז'וגה בוניטו", "תשחק יפה"),
+  ...BASE_PORTUGUESE_PRAISE,
+];
+
+const ADDITIONAL_PORTUGUESE_PRAISE = [
+  ptPraise("Muito bem!", "מואיטו בן", "כל הכבוד"),
+  ptPraise("Parabéns!", "פאראבנס", "כל הכבוד וברכות"),
+  ptPraise("Excelente!", "אקסלנטצ'י", "מצוין"),
+  ptPraise("Ótimo!", "אוטימו", "מעולה"),
+  ptPraise("Perfeito!", "פרפייטו", "מושלם"),
+  ptPraise("Incrível!", "אינקריבל", "מדהים"),
+  ptPraise("Fantástico!", "פנטסטיקו", "נהדר"),
+  ptPraise("Maravilhoso!", "מאראביליוזו", "נפלא"),
+  ptPraise("Sensacional!", "סנססיונאו", "יוצא מן הכלל"),
+  ptPraise("Espetacular!", "אספטאקולאר", "מרהיב"),
+  ptPraise("Genial!", "ז'ניאו", "גאוני"),
+  ptPraise("Impressionante!", "אימפרסיוננטצ'י", "מרשים"),
+  ptPraise("Brilhante!", "בריליאנטצ'י", "מבריק"),
+  ptPraise("Formidável!", "פורמידאבל", "נהדר"),
+  ptPraise("Magnífico!", "מאגניפיקו", "נפלא"),
+  ptPraise("Arrasou!", "אהאסו", "הצלחת בגדול"),
+  ptPraise("Você conseguiu!", "בוסה קונסגיו", "הצלחת"),
+  ptPraise("Acertou!", "אסרטו", "ענית נכון"),
+  ptPraise("Resposta certa!", "הספוסטה סרטה", "תשובה נכונה"),
+  ptPraise("Está correto!", "אסטה קוהטו", "זה נכון"),
+  ptPraise("Isso mesmo!", "איסו מזמו", "בדיוק כך"),
+  ptPraise("É isso aí!", "אה איסו אהי", "זה בדיוק זה"),
+  ptPraise("Muito bom!", "מואיטו בון", "טוב מאוד"),
+  ptPraise("Bom trabalho!", "בון טראבאליו", "עבודה טובה"),
+  ptPraise("Belo trabalho!", "בלו טראבאליו", "עבודה יפה"),
+  ptPraise("Ótima resposta!", "אוטימה הספוסטה", "תשובה מעולה"),
+  ptPraise("Que acerto!", "קי אסרטו", "איזו תשובה נכונה"),
+  ptPraise("Que beleza!", "קי בלזה", "איזה יופי"),
+  ptPraise("Que maravilha!", "קי מאראביליה", "איזה נפלא"),
+  ptPraise("Show de bola!", "שו ג'י בולה", "מעולה ממש"),
+  ptPraise("Nota dez!", "נוטה דז", "ציון עשר"),
+  ptPraise("Você é demais!", "בוסה אה דמאיס", "אתה מדהים"),
+  ptPraise("Você é fera!", "בוסה אה פרה", "אתה תותח"),
+  ptPraise("Você é craque!", "בוסה אה קראקי", "אתה אלוף"),
+  ptPraise("Você é campeão!", "בוסה אה קמפיאו", "אתה אלוף"),
+  ptPraise("Você é inteligente!", "בוסה אה אינטליז'נטצ'י", "אתה חכם"),
+  ptPraise("Você aprende rápido!", "בוסה אפרנדז'י האפידו", "אתה לומד מהר"),
+  ptPraise("Você foi muito bem!", "בוסה פוי מואיטו בן", "הצלחת יפה מאוד"),
+  ptPraise("Tenho orgulho de você!", "טניו אורגוליו ג'י בוסה", "אני גאה בך"),
+  ptPraise("Você mandou muito bem!", "בוסה מנדו מואיטו בן", "עשית את זה מצוין"),
+  ptPraise("Continue assim!", "קונטינואי אסין", "תמשיך כך"),
+  ptPraise("Siga em frente!", "סיגה אין פרנטצ'י", "תמשיך קדימה"),
+  ptPraise("Vamos lá!", "באמוס לה", "קדימה"),
+  ptPraise("Força!", "פאָרסה", "כוח וקדימה"),
+  ptPraise("Coragem!", "קוראז'ם", "אומץ"),
+  ptPraise("Confie em você!", "קונפיאי אין בוסה", "תאמין בעצמך"),
+  ptPraise("Você pode!", "בוסה פודז'י", "אתה יכול"),
+  ptPraise("Você consegue!", "בוסה קונסגי", "אתה מסוגל"),
+  ptPraise("Mais uma!", "מאיס אומה", "עוד אחת"),
+  ptPraise("Continue aprendendo!", "קונטינואי אפרנדנדו", "תמשיך ללמוד"),
+  ptPraise("Continue treinando!", "קונטינואי טרייננדו", "תמשיך להתאמן"),
+  ptPraise("Você está melhorando!", "בוסה אסטה מליורנדו", "אתה משתפר"),
+  ptPraise("Cada vez melhor!", "קאדה בז מליור", "כל פעם טוב יותר"),
+  ptPraise("Passo a passo!", "פאסו אה פאסו", "צעד אחר צעד"),
+  ptPraise("Com calma!", "קון קאומה", "ברוגע"),
+  ptPraise("Com atenção!", "קון אטנסאו", "בתשומת לב"),
+  ptPraise("Mantenha o foco!", "מנטניה או פוקו", "שמור על הריכוז"),
+  ptPraise("Que foco!", "קי פוקו", "איזה ריכוז"),
+  ptPraise("Boa concentração!", "בואה קונסנטרסאו", "ריכוז טוב"),
+  ptPraise("Grande esforço!", "גראנדז'י אספורסו", "מאמץ גדול"),
+  ptPraise("Seu esforço valeu a pena!", "סאו אספורסו באליו אה פנה", "המאמץ שלך השתלם"),
+  ptPraise("Você se superou!", "בוסה סי סופרו", "התעלית על עצמך"),
+  ptPraise("Belo progresso!", "בלו פרוגרסו", "התקדמות יפה"),
+  ptPraise("Ótimo progresso!", "אוטימו פרוגרסו", "התקדמות מעולה"),
+  ptPraise("Está indo muito bem!", "אסטה אינדו מואיטו בן", "הולך לך מצוין"),
+  ptPraise("No caminho certo!", "נו קמיניו סרטו", "בדרך הנכונה"),
+  ptPraise("Você pensou bem!", "בוסה פנסו בן", "חשבת היטב"),
+  ptPraise("Boa escolha!", "בואה אסקוליה", "בחירה טובה"),
+  ptPraise("Boa memória!", "בואה ממוריה", "זיכרון טוב"),
+  ptPraise("Conta certinha!", "קונטה סרטיניה", "חישוב מדויק"),
+  ptPraise("Cálculo perfeito!", "קאוקולו פרפייטו", "חישוב מושלם"),
+  ptPraise("Raciocínio rápido!", "הסיוסיניו האפידו", "חשיבה מהירה"),
+  ptPraise("Raciocínio brilhante!", "הסיוסיניו בריליאנטצ'י", "חשיבה מבריקה"),
+  ptPraise("Que precisão!", "קי פרסיזאו", "איזה דיוק"),
+  ptPraise("Que rapidez!", "קי האפידז", "איזו מהירות"),
+  ptPraise("Você dominou!", "בוסה דומינו", "שלטת בזה"),
+  ptPraise("Desafio vencido!", "דזאפיו בנסידו", "האתגר הושלם"),
+  ptPraise("Missão cumprida!", "מיסאו קומפרידה", "המשימה הושלמה"),
+  ptPraise("Vitória!", "ביטוריה", "ניצחון"),
+  ptPraise("Sucesso!", "סוססו", "הצלחה"),
+  ptPraise("Grande conquista!", "גראנדז'י קונקיסטה", "הישג גדול"),
+  ptPraise("Você acertou em cheio!", "בוסה אסרטו אין שיו", "קלעת בדיוק"),
+  ptPraise("Que resultado!", "קי הזולטאדו", "איזו תוצאה"),
+  ptPraise("Resposta brilhante!", "הספוסטה בריליאנטצ'י", "תשובה מבריקה"),
+  ptPraise("Pensamento afiado!", "פנסמנטו אפיאדו", "מחשבה חדה"),
+  ptPraise("Mente rápida!", "מנטצ'י האפידה", "מחשבה מהירה"),
+  ptPraise("Matemática bonita!", "מטמטיקה בוניטה", "מתמטיקה יפה"),
+  ptPraise("Você resolveu!", "בוסה הזולבאו", "פתרת את זה"),
+  ptPraise("Problema resolvido!", "פרובלמה הזולבידו", "הבעיה נפתרה"),
+  ptPraise("Tudo certo!", "טודו סרטו", "הכול נכון"),
+  ptPraise("Boa energia!", "בואה אנרז'יה", "אנרגיה טובה"),
+  ptPraise("Ginga bonita!", "ז'ינגה בוניטה", "ג'ינגה יפה"),
+  ptPraise("Jogo bonito!", "ז'וגו בוניטו", "משחק יפה"),
+  ptPraise("Bela esquiva!", "בלה אסקיבה", "התחמקות יפה"),
+  ptPraise("Movimento bonito!", "מובימנטו בוניטו", "תנועה יפה"),
+  ptPraise("Movimento certeiro!", "מובימנטו סרטיירו", "תנועה מדויקת"),
+  ptPraise("Mandinga boa!", "מנדז'ינגה בואה", "חוכמת משחק טובה"),
+  ptPraise("Craque da roda!", "קראקי דה הודה", "אלוף הרודה"),
+  ptPraise("Campeão da roda!", "קמפיאו דה הודה", "אלוף מעגל הקפואירה"),
+  ptPraise("Brilhe na roda!", "בריליי נה הודה", "תזרח ברודה"),
+];
+
+const PORTUGUESE_PRAISE = [
+  ...BASE_PORTUGUESE_PRAISE,
+  ...ADDITIONAL_PORTUGUESE_PRAISE,
 ];
 
 const ASSISTED_PRAISE = [
@@ -146,11 +271,12 @@ const FACT_CONTINUE_COPY = [
 ];
 
 function ptPraise(word, spokenWord, meaning) {
+  const spokenMeaning = meaning.replace(/\s*\/\s*/g, " או ");
   return {
     key: `pt:${word}:${spokenWord}`,
     text: word,
     meaning: `פורטוגזית: ${meaning}`,
-    speak: `${spokenWord}. בפורטוגזית: ${meaning}`,
+    speak: `${spokenWord}. בפורטוגזית: ${spokenMeaning}`,
   };
 }
 
@@ -600,9 +726,23 @@ const state = {
   praiseHistory: {
     clean: [],
     assisted: [],
+    portuguese: [],
+  },
+  scratchpad: {
+    drawing: false,
+    pointerId: null,
+    lastX: 0,
+    lastY: 0,
+    questionKey: "",
+    hasInk: false,
+    pausedChampionshipMs: null,
   },
   lastRewardVideoId: {},
   deferredInstallPrompt: null,
+  serviceWorkerRegistration: null,
+  waitingServiceWorker: null,
+  androidUpdateAvailable: false,
+  updateReloadPending: false,
   audio: null,
   particles: [],
   ambientParticles: [],
@@ -635,6 +775,7 @@ const els = {};
 
 document.addEventListener("DOMContentLoaded", () => {
   bindElements();
+  saveStorage();
   applyLaunchMode();
   hydrateHome();
   bindEvents();
@@ -654,6 +795,7 @@ function bindElements() {
     finishScreen: document.getElementById("finishScreen"),
     backButton: document.getElementById("backButton"),
     installButton: document.getElementById("installButton"),
+    updateButton: document.getElementById("updateButton"),
     voiceButton: document.getElementById("voiceButton"),
     soundButton: document.getElementById("soundButton"),
     startButton: document.getElementById("startButton"),
@@ -670,6 +812,10 @@ function bindElements() {
     subjectButtons: Array.from(document.querySelectorAll(".subject-card")),
     trackGrid: document.getElementById("trackGrid"),
     trackCards: Array.from(document.querySelectorAll(".track-card")),
+    fastInstrumentPanel: document.getElementById("fastInstrumentPanel"),
+    fastInstrumentProgress: document.getElementById("fastInstrumentProgress"),
+    fastInstrumentNext: document.getElementById("fastInstrumentNext"),
+    fastInstrumentList: document.getElementById("fastInstrumentList"),
     longLayoutPanel: document.getElementById("longLayoutPanel"),
     longLayoutButtons: Array.from(document.querySelectorAll(".long-layout-button")),
     championshipPanel: document.getElementById("championshipPanel"),
@@ -693,6 +839,19 @@ function bindElements() {
     timerPill: document.getElementById("timerPill"),
     timerClock: document.getElementById("timerClock"),
     timerLabel: document.getElementById("timerLabel"),
+    exerciseHelpButton: document.getElementById("exerciseHelpButton"),
+    exerciseHelpMenu: document.getElementById("exerciseHelpMenu"),
+    layoutHelpButton: document.getElementById("layoutHelpButton"),
+    layoutHelpLabel: document.getElementById("layoutHelpLabel"),
+    layoutHelpDetail: document.getElementById("layoutHelpDetail"),
+    scratchpadButton: document.getElementById("scratchpadButton"),
+    scratchpadDialog: document.getElementById("scratchpadDialog"),
+    scratchpadQuestion: document.getElementById("scratchpadQuestion"),
+    scratchpadCanvas: document.getElementById("scratchpadCanvas"),
+    scratchpadPlaceholder: document.getElementById("scratchpadPlaceholder"),
+    closeScratchpadButton: document.getElementById("closeScratchpadButton"),
+    clearScratchpadButton: document.getElementById("clearScratchpadButton"),
+    doneScratchpadButton: document.getElementById("doneScratchpadButton"),
     progressBeads: document.getElementById("progressBeads"),
     fighter: document.getElementById("fighter"),
     questionText: document.getElementById("questionText"),
@@ -795,6 +954,46 @@ function bindEvents() {
       playTap();
     });
   });
+
+  els.exerciseHelpButton.addEventListener("click", () => {
+    toggleExerciseHelpMenu();
+    tap();
+    playTap();
+  });
+
+  els.layoutHelpButton.addEventListener("click", () => {
+    const currentLayout = normalizeLongLayout(state.storage.longLayout);
+    state.storage.longLayout = currentLayout === "vertical" ? "horizontal" : "vertical";
+    saveStorage();
+    renderLongLayoutSelection();
+    renderExerciseHelpMenu();
+    const item = currentItem();
+    if (item) renderQuestion(item);
+    closeExerciseHelpMenu();
+    tap();
+    playTap();
+  });
+
+  els.scratchpadButton.addEventListener("click", () => {
+    openScratchpad();
+    tap();
+    playTap();
+  });
+  els.closeScratchpadButton.addEventListener("click", closeScratchpad);
+  els.doneScratchpadButton.addEventListener("click", closeScratchpad);
+  els.clearScratchpadButton.addEventListener("click", () => {
+    clearScratchpad();
+    tap();
+    playTap();
+  });
+  els.scratchpadDialog.addEventListener("cancel", (event) => {
+    event.preventDefault();
+    closeScratchpad();
+  });
+  els.scratchpadCanvas.addEventListener("pointerdown", beginScratchpadStroke);
+  els.scratchpadCanvas.addEventListener("pointermove", continueScratchpadStroke);
+  els.scratchpadCanvas.addEventListener("pointerup", endScratchpadStroke);
+  els.scratchpadCanvas.addEventListener("pointercancel", endScratchpadStroke);
 
   els.championshipButton.addEventListener("click", () => {
     const championship = championshipForHome();
@@ -901,13 +1100,80 @@ function bindEvents() {
     els.installButton.hidden = true;
   });
 
+  els.updateButton.addEventListener("click", applyAvailableUpdate);
+
+  window.addEventListener("android-update-available", () => {
+    state.androidUpdateAvailable = true;
+    revealUpdateButton();
+  });
+
+  try {
+    if (window.AndroidUpdates && typeof window.AndroidUpdates.check === "function") {
+      window.AndroidUpdates.check();
+    }
+  } catch {
+    // Google Play in-app updates are available only inside the Android wrapper.
+  }
+
   window.addEventListener("beforeinstallprompt", (event) => {
     event.preventDefault();
     state.deferredInstallPrompt = event;
     els.installButton.hidden = false;
   });
 
-  window.addEventListener("resize", setupCanvases);
+  window.addEventListener("resize", () => {
+    setupCanvases();
+    if (els.scratchpadDialog.open) resizeScratchpadCanvas();
+  });
+}
+
+function revealUpdateButton() {
+  if (!els.updateButton) return;
+  els.updateButton.hidden = false;
+  els.updateButton.disabled = false;
+  if (els.installButton) els.installButton.hidden = true;
+}
+
+async function applyAvailableUpdate() {
+  saveStorage();
+  tap([20, 28, 20]);
+  playTap();
+  els.updateButton.disabled = true;
+
+  if (
+    state.androidUpdateAvailable &&
+    window.AndroidUpdates &&
+    typeof window.AndroidUpdates.install === "function"
+  ) {
+    try {
+      window.AndroidUpdates.install();
+      window.setTimeout(() => {
+        if (els.updateButton) els.updateButton.disabled = false;
+      }, 1800);
+      return;
+    } catch {
+      els.updateButton.disabled = false;
+      return;
+    }
+  }
+
+  let waitingWorker = state.waitingServiceWorker;
+  if (!waitingWorker && state.serviceWorkerRegistration) {
+    try {
+      await state.serviceWorkerRegistration.update();
+      waitingWorker = state.serviceWorkerRegistration.waiting;
+    } catch {
+      els.updateButton.disabled = false;
+      return;
+    }
+  }
+
+  if (!waitingWorker) {
+    els.updateButton.disabled = false;
+    return;
+  }
+  state.updateReloadPending = true;
+  waitingWorker.postMessage({ type: "SKIP_WAITING" });
 }
 
 function openExternal(url) {
@@ -1144,6 +1410,8 @@ function word(number) {
 
 function loadStorage() {
   const defaults = {
+    schemaVersion: STORAGE_SCHEMA_VERSION,
+    savedAt: 0,
     xp: 0,
     bestStreak: 0,
     sessions: 0,
@@ -1151,8 +1419,11 @@ function loadStorage() {
     voice: true,
     longLayout: DEFAULT_LONG_LAYOUT,
     selectedSkin: DEFAULT_SKIN_ID,
+    unlockedSkinIds: [],
     lastSkinPromptXp: 0,
     cordStamps: 0,
+    fastInstrumentStamps: 0,
+    selectedFastInstrument: "auto",
     championships: {},
     facts: {},
   };
@@ -1168,21 +1439,143 @@ function loadStorage() {
     };
   }
 
+  const parsed = mergeProgressCandidates(readProgressCandidates());
+  if (!parsed) return defaults;
+  const merged = { ...defaults, ...parsed, facts: { ...defaults.facts, ...parsed.facts } };
+  if (merged.selectedSkin === "sora") merged.selectedSkin = "vesoura";
+  merged.championships = { ...defaults.championships, ...parsed.championships };
+  merged.schemaVersion = STORAGE_SCHEMA_VERSION;
+  merged.savedAt = Math.max(0, Number(merged.savedAt) || 0);
+  merged.xp = Math.max(0, Number(merged.xp) || 0);
+  const unlockedSkinIds = Array.isArray(parsed.unlockedSkinIds)
+    ? parsed.unlockedSkinIds
+    : TEACHER_SKINS.filter(
+        (skin) => skin.id !== DEFAULT_SKIN_ID && skin.unlockXp <= merged.xp,
+      ).map((skin) => skin.id);
+  merged.unlockedSkinIds = [
+    ...new Set(
+      unlockedSkinIds.filter((id) =>
+        TEACHER_SKINS.some((skin) => skin.id === id && skin.id !== DEFAULT_SKIN_ID),
+      ),
+    ),
+  ];
+  const storedSkin = skinById(merged.selectedSkin);
+  merged.selectedSkin =
+    storedSkin.id === DEFAULT_SKIN_ID || merged.unlockedSkinIds.includes(storedSkin.id)
+      ? storedSkin.id
+      : DEFAULT_SKIN_ID;
+  merged.longLayout = normalizeLongLayout(merged.longLayout);
+  merged.lastSkinPromptXp = Number(merged.lastSkinPromptXp) || 0;
+  merged.cordStamps = Math.max(0, Number(merged.cordStamps) || 0);
+  merged.fastInstrumentStamps = clamp(
+    Math.floor(Number(merged.fastInstrumentStamps) || 0),
+    0,
+    FAST_INSTRUMENT_MAX_STAMPS,
+  );
+  merged.selectedFastInstrument = normalizeSelectedFastInstrument(
+    merged.selectedFastInstrument,
+    merged.fastInstrumentStamps,
+  );
+  return merged;
+}
+
+function readProgressCandidates() {
+  const candidates = [];
+  [STORAGE_KEY, STORAGE_BACKUP_KEY].forEach((key) => {
+    try {
+      const candidate = parseProgressCandidate(localStorage.getItem(key));
+      if (candidate) candidates.push(candidate);
+    } catch {
+      // Continue with the other local or native backup.
+    }
+  });
+
   try {
-    const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
-    if (!parsed) return defaults;
-    const merged = { ...defaults, ...parsed, facts: { ...defaults.facts, ...parsed.facts } };
-    if (merged.selectedSkin === "sora") merged.selectedSkin = "vesoura";
-    merged.championships = { ...defaults.championships, ...parsed.championships };
-    const storedSkin = skinById(merged.selectedSkin);
-    merged.selectedSkin = storedSkin.unlockXp <= merged.xp ? storedSkin.id : DEFAULT_SKIN_ID;
-    merged.longLayout = normalizeLongLayout(merged.longLayout);
-    merged.lastSkinPromptXp = Number(merged.lastSkinPromptXp) || 0;
-    merged.cordStamps = Math.max(0, Number(merged.cordStamps) || 0);
-    return merged;
+    if (window.AndroidProgress && typeof window.AndroidProgress.load === "function") {
+      const candidate = parseProgressCandidate(window.AndroidProgress.load());
+      if (candidate) candidates.push(candidate);
+    }
   } catch {
-    return defaults;
+    // The web version has no native progress bridge.
   }
+  return candidates;
+}
+
+function parseProgressCandidate(raw) {
+  if (!raw) return null;
+  try {
+    const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function mergeProgressCandidates(candidates) {
+  if (!candidates.length) return null;
+  const byRecency = [...candidates].sort(
+    (left, right) => (Number(right.savedAt) || 0) - (Number(left.savedAt) || 0),
+  );
+  const merged = { ...byRecency[0] };
+  const maxXp = Math.max(...candidates.map((candidate) => Number(candidate.xp) || 0));
+  const currentCordCandidates = candidates.filter(
+    (candidate) => (Number(candidate.xp) || 0) === maxXp,
+  );
+  merged.xp = maxXp;
+  merged.cordStamps = Math.max(
+    0,
+    ...currentCordCandidates.map((candidate) => Number(candidate.cordStamps) || 0),
+  );
+  merged.fastInstrumentStamps = Math.max(
+    0,
+    ...candidates.map((candidate) => Number(candidate.fastInstrumentStamps) || 0),
+  );
+  merged.bestStreak = Math.max(
+    0,
+    ...candidates.map((candidate) => Number(candidate.bestStreak) || 0),
+  );
+  merged.sessions = Math.max(
+    0,
+    ...candidates.map((candidate) => Number(candidate.sessions) || 0),
+  );
+  merged.lastSkinPromptXp = Math.max(
+    0,
+    ...candidates.map((candidate) => Number(candidate.lastSkinPromptXp) || 0),
+  );
+
+  const storedUnlockedSkinLists = candidates
+    .filter((candidate) => Array.isArray(candidate.unlockedSkinIds))
+    .map((candidate) => candidate.unlockedSkinIds);
+  if (storedUnlockedSkinLists.length) {
+    merged.unlockedSkinIds = [...new Set(storedUnlockedSkinLists.flat())];
+  }
+
+  const selectedSkinCandidate = byRecency.find((candidate) => {
+    const skin = skinById(candidate.selectedSkin);
+    return skin.id !== DEFAULT_SKIN_ID && skin.unlockXp <= maxXp;
+  });
+  if (selectedSkinCandidate) merged.selectedSkin = selectedSkinCandidate.selectedSkin;
+
+  const selectedInstrumentIsValid =
+    merged.selectedFastInstrument === "auto" ||
+    FAST_INSTRUMENTS.some(
+      (instrument) =>
+        instrument.id === merged.selectedFastInstrument &&
+        instrument.stamps <= merged.fastInstrumentStamps,
+    );
+  if (!selectedInstrumentIsValid) {
+    const selectedInstrumentCandidate = byRecency.find((candidate) =>
+      FAST_INSTRUMENTS.some(
+        (instrument) =>
+          instrument.id === candidate.selectedFastInstrument &&
+          instrument.stamps <= merged.fastInstrumentStamps,
+      ),
+    );
+    if (selectedInstrumentCandidate) {
+      merged.selectedFastInstrument = selectedInstrumentCandidate.selectedFastInstrument;
+    }
+  }
+  return merged;
 }
 
 function factMemory(fact) {
@@ -1199,12 +1592,52 @@ function factMemory(fact) {
 }
 
 function saveStorage() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state.storage));
+  state.storage.schemaVersion = STORAGE_SCHEMA_VERSION;
+  state.storage.savedAt = Date.now();
+  state.storage.unlockedSkinIds = [
+    ...new Set(
+      (state.storage.unlockedSkinIds || []).filter((id) =>
+        TEACHER_SKINS.some((skin) => skin.id === id && skin.id !== DEFAULT_SKIN_ID),
+      ),
+    ),
+  ];
+  const serialized = JSON.stringify(state.storage);
+  [STORAGE_KEY, STORAGE_BACKUP_KEY].forEach((key) => {
+    try {
+      localStorage.setItem(key, serialized);
+    } catch {
+      // The native backup below can still preserve progress.
+    }
+  });
+  try {
+    if (window.AndroidProgress && typeof window.AndroidProgress.save === "function") {
+      window.AndroidProgress.save(serialized);
+    }
+  } catch {
+    // The browser version has no native progress bridge.
+  }
+}
+
+function clearStoredProgress() {
+  [STORAGE_KEY, STORAGE_BACKUP_KEY].forEach((key) => {
+    try {
+      localStorage.removeItem(key);
+    } catch {
+      // Continue clearing the remaining backups.
+    }
+  });
+  try {
+    if (window.AndroidProgress && typeof window.AndroidProgress.clear === "function") {
+      window.AndroidProgress.clear();
+    }
+  } catch {
+    // The browser version has no native progress bridge.
+  }
 }
 
 function confirmResetProgress() {
   const confirmed = window.confirm(
-    "לאפס את כל החגורות והנתונים?\n\nזה ימחק את כל ההיסטוריה, החותמות, התחרויות, הרצפים והגישה לסקינים. אי אפשר לבטל את הפעולה.",
+    "לאפס את כל החגורות והנתונים?\n\nזה ימחק את כל ההיסטוריה, החותמות, כלי הנגינה, התחרויות, הרצפים והגישה לסקינים. אי אפשר לבטל את הפעולה.",
   );
   if (!confirmed) return;
   resetProgress();
@@ -1223,7 +1656,7 @@ function resetProgress() {
     },
   );
 
-  localStorage.removeItem(STORAGE_KEY);
+  clearStoredProgress();
   state.storage = loadStorage();
   state.homeStep = "subjects";
   state.selectedSubject = DEFAULT_SUBJECT;
@@ -1255,7 +1688,7 @@ function resetProgress() {
   state.attempts = 0;
   state.answers = [];
   state.musicRewards = new Set();
-  state.praiseHistory = { clean: [], assisted: [] };
+  state.praiseHistory = { clean: [], assisted: [], portuguese: [] };
   state.lastRewardVideoId = {};
   state.visual.activeMove = null;
   state.fact.onDone = null;
@@ -1272,6 +1705,7 @@ function resetProgress() {
   showScreen("home");
   hydrateHome();
   renderProgress();
+  saveStorage();
   tap([18, 24, 18]);
   speak("המשחק אופס. מתחילים מחדש", 0, true);
 }
@@ -1307,6 +1741,64 @@ function accuracyRequiredForCord(cord) {
 
 function stampProgressLabel(stamps = state.storage.cordStamps, cord = getCord()) {
   return `${stamps}/${stampsRequiredForCord(cord)}`;
+}
+
+function fastInstrumentStampCount() {
+  return clamp(
+    Math.floor(Number(state.storage.fastInstrumentStamps) || 0),
+    0,
+    FAST_INSTRUMENT_MAX_STAMPS,
+  );
+}
+
+function normalizeSelectedFastInstrument(id, stamps = 0) {
+  if (id === "auto") return "auto";
+  return FAST_INSTRUMENTS.some(
+    (instrument) => instrument.id === id && instrument.stamps <= stamps,
+  )
+    ? id
+    : "auto";
+}
+
+function unlockedFastInstruments(stamps = fastInstrumentStampCount()) {
+  return FAST_INSTRUMENTS.filter((instrument) => instrument.stamps <= stamps);
+}
+
+function nextFastInstrumentMilestone(stamps = fastInstrumentStampCount()) {
+  const nextStamp = FAST_INSTRUMENTS.find((instrument) => instrument.stamps > stamps)?.stamps;
+  return nextStamp
+    ? FAST_INSTRUMENTS.filter((instrument) => instrument.stamps === nextStamp)
+    : [];
+}
+
+function fastInstrumentNames(instruments) {
+  return instruments.map((instrument) => instrument.name).join(" ו");
+}
+
+function resolveFastInstrumentProgression(
+  track,
+  accuracy,
+  currentStamps = state.storage.fastInstrumentStamps,
+) {
+  if (normalizeTrack(track) !== "fast") return null;
+  const before = clamp(
+    Math.floor(Number(currentStamps) || 0),
+    0,
+    FAST_INSTRUMENT_MAX_STAMPS,
+  );
+  const successful = accuracy > CORD_PROMOTION_ACCURACY;
+  const stamps = successful ? Math.min(FAST_INSTRUMENT_MAX_STAMPS, before + 1) : before;
+  return {
+    successful,
+    earned: stamps > before,
+    before,
+    stamps,
+    unlocked: FAST_INSTRUMENTS.filter(
+      (instrument) => instrument.stamps > before && instrument.stamps <= stamps,
+    ),
+    next: nextFastInstrumentMilestone(stamps),
+    completed: stamps >= FAST_INSTRUMENT_MAX_STAMPS,
+  };
 }
 
 function resolveCordProgression(startXp, accuracy, currentStamps = state.storage.cordStamps) {
@@ -1369,33 +1861,48 @@ function skinById(id) {
   return TEACHER_SKINS.find((skin) => skin.id === id) || TEACHER_SKINS[0];
 }
 
-function unlockedTeacherSkins(xp = state.storage.xp) {
-  return TEACHER_SKINS.filter((skin) => skin.id !== DEFAULT_SKIN_ID && skin.unlockXp <= xp);
+function unlockedTeacherSkins() {
+  const unlockedIds = new Set(state.storage.unlockedSkinIds || []);
+  return TEACHER_SKINS.filter(
+    (skin) => skin.id !== DEFAULT_SKIN_ID && unlockedIds.has(skin.id),
+  );
 }
 
-function teacherSkinsUnlocked(xp = state.storage.xp) {
-  return unlockedTeacherSkins(xp).length > 0;
+function teacherSkinsUnlocked() {
+  return unlockedTeacherSkins().length > 0;
 }
 
-function nextTeacherSkin(xp = state.storage.xp) {
-  return TEACHER_SKINS.filter((skin) => skin.id !== DEFAULT_SKIN_ID && skin.unlockXp > xp).sort(
-    (left, right) => left.unlockXp - right.unlockXp,
-  )[0];
+function nextTeacherSkin() {
+  const unlockedIds = new Set(state.storage.unlockedSkinIds || []);
+  return TEACHER_SKINS.filter(
+    (skin) => skin.id !== DEFAULT_SKIN_ID && !unlockedIds.has(skin.id),
+  ).sort((left, right) => left.unlockXp - right.unlockXp)[0];
 }
 
 function newlyUnlockedTeacherSkin(fromXp, toXp) {
   return TEACHER_SKINS.filter(
     (skin) =>
       skin.id !== DEFAULT_SKIN_ID &&
+      !(state.storage.unlockedSkinIds || []).includes(skin.id) &&
       skin.unlockXp > fromXp &&
       skin.unlockXp <= toXp &&
       skin.unlockXp > state.storage.lastSkinPromptXp,
   ).sort((left, right) => left.unlockXp - right.unlockXp)[0];
 }
 
+function unlockTeacherSkin(id) {
+  if (!TEACHER_SKINS.some((skin) => skin.id === id && skin.id !== DEFAULT_SKIN_ID)) return;
+  state.storage.unlockedSkinIds ||= [];
+  if (!state.storage.unlockedSkinIds.includes(id)) {
+    state.storage.unlockedSkinIds.push(id);
+  }
+}
+
 function activeSkin() {
   const skin = skinById(state.storage.selectedSkin);
-  return skin.unlockXp <= state.storage.xp ? skin : skinById(DEFAULT_SKIN_ID);
+  return skin.id === DEFAULT_SKIN_ID || (state.storage.unlockedSkinIds || []).includes(skin.id)
+    ? skin
+    : skinById(DEFAULT_SKIN_ID);
 }
 
 function renderSkinPanel() {
@@ -1405,15 +1912,26 @@ function renderSkinPanel() {
   els.skinPanel.classList.toggle("locked", !unlocked);
   els.skinLabel.textContent = unlocked
     ? skin.name
-    : `${nextSkin.name} נפתח ב${cordNameForXp(nextSkin.unlockXp)}`;
+    : nextSkin
+      ? `${nextSkin.name} נפתח ב${cordNameForXp(nextSkin.unlockXp)}`
+      : "כל המורים נפתחו";
   els.skinButton.disabled = !unlocked;
   els.skinButtonLabel.textContent = unlocked ? "בחר" : "נעול";
 }
 
-function showSkinDialog(reason) {
+function showSkinDialog(reason, featuredSkinId = null) {
   if (!teacherSkinsUnlocked()) return;
-  els.skinDialogTitle.textContent = reason === "rank" ? "מורה חדש נפתח" : "בחר מורה";
-  renderSkinChoices();
+  const featuredSkin =
+    reason === "rank" && featuredSkinId
+      ? TEACHER_SKINS.find(
+          (skin) =>
+            skin.id === featuredSkinId &&
+            (state.storage.unlockedSkinIds || []).includes(skin.id),
+        )
+      : null;
+  if (reason === "rank" && !featuredSkin) return;
+  els.skinDialogTitle.textContent = featuredSkin ? `${featuredSkin.name} נפתח` : "בחר מורה";
+  renderSkinChoices(featuredSkin?.id || null);
   if (!els.skinDialog.open) {
     els.skinDialog.showModal();
   }
@@ -1425,11 +1943,9 @@ function closeSkinDialog() {
   }
 }
 
-function renderSkinChoices() {
+function renderSkinChoices(onlySkinId = null) {
   els.skinGrid.innerHTML = "";
-  const available = TEACHER_SKINS.filter(
-    (skin) => skin.id !== DEFAULT_SKIN_ID && skin.unlockXp <= state.storage.xp,
-  );
+  const available = availableTeacherSkins(onlySkinId);
 
   for (const skin of available) {
     const button = document.createElement("button");
@@ -1461,6 +1977,16 @@ function renderSkinChoices() {
     els.skinGrid.append(button);
     drawSkinPreview(canvas, skin);
   }
+}
+
+function availableTeacherSkins(onlySkinId = null) {
+  const unlockedIds = new Set(state.storage.unlockedSkinIds || []);
+  return TEACHER_SKINS.filter(
+    (skin) =>
+      skin.id !== DEFAULT_SKIN_ID &&
+      unlockedIds.has(skin.id) &&
+      (!onlySkinId || skin.id === onlySkinId),
+  );
 }
 
 function championshipStats(id) {
@@ -1586,6 +2112,7 @@ function renderSubjectSelection() {
   if (els.homeSubtitle) {
     els.homeSubtitle.textContent = practiceStep ? SUBJECTS[state.selectedSubject].hero : "בחר נושא · ואז נכנסים לרודה";
   }
+  renderFastInstrumentPanel();
 }
 
 function renderModeSelection() {
@@ -1599,6 +2126,76 @@ function renderTrackSelection() {
   els.trackCards.forEach((button) => {
     button.classList.toggle("selected", normalizeTrack(button.dataset.track) === state.selectedTrack);
   });
+  renderFastInstrumentPanel();
+}
+
+function renderFastInstrumentPanel() {
+  if (!els.fastInstrumentPanel) return;
+  const visible = state.homeStep === "practice" && state.selectedTrack === "fast";
+  els.fastInstrumentPanel.hidden = !visible;
+
+  const stamps = fastInstrumentStampCount();
+  const unlocked = unlockedFastInstruments(stamps);
+  const next = nextFastInstrumentMilestone(stamps);
+  const selectedId = normalizeSelectedFastInstrument(
+    state.storage.selectedFastInstrument,
+    stamps,
+  );
+  state.storage.selectedFastInstrument = selectedId;
+  els.fastInstrumentProgress.textContent = `${stamps}/${FAST_INSTRUMENT_MAX_STAMPS} חותמות`;
+  els.fastInstrumentNext.textContent = next.length
+    ? `${fastInstrumentNames(next)} ${next.length > 1 ? "נפתחים" : "נפתח"} ב־${next[0].stamps}`
+    : "כל אוסף הכלים הושלם";
+  els.fastInstrumentList.innerHTML = "";
+
+  [{ id: "auto", name: "אוטומטי", stamps: 0, placement: "auto" }, ...FAST_INSTRUMENTS].forEach(
+    (instrument) => {
+      const badge = document.createElement("button");
+      const isAuto = instrument.id === "auto";
+      const isUnlocked = isAuto || unlocked.some((item) => item.id === instrument.id);
+      const isSelected = selectedId === instrument.id;
+      badge.className = "fast-instrument-badge";
+      badge.type = "button";
+      badge.disabled = !isUnlocked;
+      badge.classList.toggle("unlocked", isUnlocked);
+      badge.classList.toggle("selected", isSelected);
+      badge.setAttribute("aria-pressed", String(isSelected));
+      badge.setAttribute(
+        "aria-label",
+        isAuto ? "בחירת כלי אוטומטית" : `${instrument.name}, ${isUnlocked ? "פתוח" : "נעול"}`,
+      );
+
+      const name = document.createElement("strong");
+      name.textContent = instrument.name;
+      const milestone = document.createElement("span");
+      milestone.textContent = isSelected
+        ? "נבחר"
+        : isAuto
+          ? "מתחלף"
+          : isUnlocked
+            ? "נפתח"
+            : `${instrument.stamps} חותמות`;
+      badge.append(name, milestone);
+      badge.addEventListener("click", () => {
+        if (!isUnlocked) return;
+        state.storage.selectedFastInstrument = instrument.id;
+        saveStorage();
+        renderFastInstrumentPanel();
+        tap([18, 24, 18]);
+        playTap();
+        speak(
+          isAuto
+            ? "הכלים מתחלפים אוטומטית"
+            : instrument.placement === "floor"
+              ? `${instrument.name} עומד ליד הלוחם`
+              : `${instrument.name} נבחר`,
+          0,
+          true,
+        );
+      });
+      els.fastInstrumentList.append(badge);
+    },
+  );
 }
 
 function renderLongLayoutSelection() {
@@ -1616,8 +2213,33 @@ function renderLongLayoutSelection() {
   });
 }
 
+function renderExerciseHelpMenu() {
+  if (!els.layoutHelpButton) return;
+  const vertical = normalizeLongLayout(state.storage.longLayout) === "vertical";
+  els.layoutHelpLabel.textContent = vertical ? "הצג במאוזן" : "הצג במאונך";
+  els.layoutHelpDetail.textContent = vertical ? "תרגיל בשורה אחת" : "סידור טור־טור";
+  els.layoutHelpButton.setAttribute("aria-pressed", String(vertical));
+}
+
+function toggleExerciseHelpMenu() {
+  const opening = els.exerciseHelpMenu.hidden;
+  els.exerciseHelpMenu.hidden = !opening;
+  els.exerciseHelpButton.setAttribute("aria-expanded", String(opening));
+  if (opening) renderExerciseHelpMenu();
+}
+
+function closeExerciseHelpMenu() {
+  if (!els.exerciseHelpMenu) return;
+  els.exerciseHelpMenu.hidden = true;
+  els.exerciseHelpButton.setAttribute("aria-expanded", "false");
+}
+
 function showScreen(name) {
   state.currentScreen = name;
+  if (name !== "game") {
+    closeExerciseHelpMenu();
+    if (els.scratchpadDialog?.open) closeScratchpad();
+  }
   els.homeScreen.classList.toggle("active", name === "home");
   els.gameScreen.classList.toggle("active", name === "game");
   els.finishScreen.classList.toggle("active", name === "finish");
@@ -2136,6 +2758,7 @@ function formatNumber(value) {
 
 function nextQuestion() {
   clearChampionshipTimer();
+  closeExerciseHelpMenu();
   state.locked = false;
 
   if (state.questionIndex >= state.session.length) {
@@ -2182,7 +2805,8 @@ function formatQuestion(item) {
 
 function renderQuestion(item) {
   const questionLabel = formatQuestion(item);
-  const vertical = shouldShowVerticalQuestion(item.fact);
+  const verticalParts = verticalQuestionParts(item);
+  const vertical = shouldShowVerticalQuestion(verticalParts);
   els.questionText.replaceChildren();
   els.questionText.classList.toggle("long-question", !vertical && questionLabel.length >= 12);
   els.questionText.classList.toggle("vertical-question", vertical);
@@ -2192,37 +2816,43 @@ function renderQuestion(item) {
     return;
   }
 
-  els.questionText.append(createVerticalQuestion(item.fact));
+  els.questionText.append(createVerticalQuestion(verticalParts));
 }
 
-function shouldShowVerticalQuestion(fact) {
-  return (
-    LONG_LAYOUT_MODES.has(fact?.mode) &&
-    normalizeLongLayout(state.storage.longLayout) === "vertical" &&
-    Array.isArray(fact.operands) &&
-    fact.operands.length === 2 &&
-    fact.operator
-  );
+function verticalQuestionParts(item) {
+  if (!item?.fact) return null;
+  const questionLabel = formatQuestion(item).trim();
+  const match = questionLabel.match(/^(.+?)\s+([+×÷?=<>−-])\s+(.+)$/u);
+  if (!match) return null;
+  return {
+    top: match[1],
+    operator: match[2],
+    bottom: match[3],
+    mode: item.fact.mode || "multiplication",
+  };
 }
 
-function createVerticalQuestion(fact) {
-  const [top, bottom] = fact.operands.map(formatNumber);
+function shouldShowVerticalQuestion(parts) {
+  return normalizeLongLayout(state.storage.longLayout) === "vertical" && Boolean(parts);
+}
+
+function createVerticalQuestion(parts) {
   const wrap = document.createElement("span");
-  wrap.className = `vertical-problem vertical-problem--${fact.mode === "arith-div" ? "division" : "multiplication"}`;
+  wrap.className = `vertical-problem vertical-problem--${parts.mode === "arith-div" ? "division" : "standard"}`;
 
   const topRow = document.createElement("span");
   topRow.className = "vertical-problem__row";
-  topRow.textContent = top;
+  topRow.textContent = parts.top;
 
   const bottomRow = document.createElement("span");
   bottomRow.className = "vertical-problem__row vertical-problem__row--operator";
 
   const operator = document.createElement("span");
   operator.className = "vertical-problem__operator";
-  operator.textContent = fact.operator;
+  operator.textContent = parts.operator;
 
   const bottomNumber = document.createElement("span");
-  bottomNumber.textContent = bottom;
+  bottomNumber.textContent = parts.bottom;
 
   bottomRow.append(operator, bottomNumber);
 
@@ -2235,6 +2865,158 @@ function createVerticalQuestion(fact) {
 
   wrap.append(topRow, bottomRow, line, answerCue);
   return wrap;
+}
+
+function openScratchpad() {
+  const item = currentItem();
+  if (!item || state.currentScreen !== "game") return;
+  closeExerciseHelpMenu();
+
+  const questionKey = `${state.questionIndex}:${item.fact.key}`;
+  const newQuestion = state.scratchpad.questionKey !== questionKey;
+  state.scratchpad.questionKey = questionKey;
+  els.scratchpadQuestion.textContent = formatQuestion(item);
+
+  if (state.activeChampionship && state.championshipRun.timer) {
+    state.scratchpad.pausedChampionshipMs = Math.max(
+      0,
+      state.championshipRun.deadline - Date.now(),
+    );
+    stopChampionshipTimer(true);
+  }
+
+  if (!els.scratchpadDialog.open) els.scratchpadDialog.showModal();
+  window.requestAnimationFrame(() => resizeScratchpadCanvas({ clear: newQuestion }));
+}
+
+function closeScratchpad() {
+  state.scratchpad.drawing = false;
+  state.scratchpad.pointerId = null;
+  if (els.scratchpadDialog?.open) els.scratchpadDialog.close();
+
+  const pausedMs = state.scratchpad.pausedChampionshipMs;
+  state.scratchpad.pausedChampionshipMs = null;
+  if (
+    pausedMs !== null &&
+    state.activeChampionship &&
+    !state.locked &&
+    state.currentScreen === "game"
+  ) {
+    resumeChampionshipTimer(pausedMs);
+  }
+}
+
+function resizeScratchpadCanvas(options = {}) {
+  const canvas = els.scratchpadCanvas;
+  if (!canvas) return;
+  const rect = canvas.getBoundingClientRect();
+  if (rect.width <= 0 || rect.height <= 0) return;
+
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const nextWidth = Math.max(1, Math.round(rect.width * dpr));
+  const nextHeight = Math.max(1, Math.round(rect.height * dpr));
+  const sizeChanged = canvas.width !== nextWidth || canvas.height !== nextHeight;
+  let snapshot = null;
+
+  if (sizeChanged && state.scratchpad.hasInk && !options.clear) {
+    snapshot = document.createElement("canvas");
+    snapshot.width = canvas.width;
+    snapshot.height = canvas.height;
+    snapshot.getContext("2d").drawImage(canvas, 0, 0);
+  }
+
+  if (sizeChanged) {
+    canvas.width = nextWidth;
+    canvas.height = nextHeight;
+  }
+
+  const context = canvas.getContext("2d");
+  if (snapshot) {
+    context.setTransform(1, 0, 0, 1, 0, 0);
+    context.drawImage(snapshot, 0, 0, nextWidth, nextHeight);
+  }
+  context.setTransform(dpr, 0, 0, dpr, 0, 0);
+  configureScratchpadPen(context);
+
+  if (options.clear) clearScratchpad();
+  renderScratchpadPlaceholder();
+}
+
+function clearScratchpad() {
+  const canvas = els.scratchpadCanvas;
+  if (!canvas) return;
+  const context = canvas.getContext("2d");
+  context.save();
+  context.setTransform(1, 0, 0, 1, 0, 0);
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.restore();
+  state.scratchpad.hasInk = false;
+  state.scratchpad.drawing = false;
+  state.scratchpad.pointerId = null;
+  renderScratchpadPlaceholder();
+}
+
+function configureScratchpadPen(context) {
+  context.strokeStyle = "#241d19";
+  context.fillStyle = "#241d19";
+  context.lineWidth = 4;
+  context.lineCap = "round";
+  context.lineJoin = "round";
+}
+
+function scratchpadPoint(event) {
+  const rect = els.scratchpadCanvas.getBoundingClientRect();
+  return {
+    x: event.clientX - rect.left,
+    y: event.clientY - rect.top,
+  };
+}
+
+function beginScratchpadStroke(event) {
+  if (event.pointerType === "mouse" && event.button !== 0) return;
+  event.preventDefault();
+  const point = scratchpadPoint(event);
+  const context = els.scratchpadCanvas.getContext("2d");
+  configureScratchpadPen(context);
+  context.beginPath();
+  context.arc(point.x, point.y, 2, 0, Math.PI * 2);
+  context.fill();
+
+  state.scratchpad.drawing = true;
+  state.scratchpad.pointerId = event.pointerId;
+  state.scratchpad.lastX = point.x;
+  state.scratchpad.lastY = point.y;
+  state.scratchpad.hasInk = true;
+  els.scratchpadCanvas.setPointerCapture?.(event.pointerId);
+  renderScratchpadPlaceholder();
+}
+
+function continueScratchpadStroke(event) {
+  if (!state.scratchpad.drawing || event.pointerId !== state.scratchpad.pointerId) return;
+  event.preventDefault();
+  const point = scratchpadPoint(event);
+  const context = els.scratchpadCanvas.getContext("2d");
+  configureScratchpadPen(context);
+  context.beginPath();
+  context.moveTo(state.scratchpad.lastX, state.scratchpad.lastY);
+  context.lineTo(point.x, point.y);
+  context.stroke();
+  state.scratchpad.lastX = point.x;
+  state.scratchpad.lastY = point.y;
+}
+
+function endScratchpadStroke(event) {
+  if (event.pointerId !== state.scratchpad.pointerId) return;
+  state.scratchpad.drawing = false;
+  state.scratchpad.pointerId = null;
+  if (els.scratchpadCanvas.hasPointerCapture?.(event.pointerId)) {
+    els.scratchpadCanvas.releasePointerCapture(event.pointerId);
+  }
+}
+
+function renderScratchpadPlaceholder() {
+  if (!els.scratchpadPlaceholder) return;
+  els.scratchpadPlaceholder.hidden = state.scratchpad.hasInk;
 }
 
 function renderAnswers(item) {
@@ -2372,7 +3154,7 @@ function chooseAnswer(button, answer) {
     renderProgress();
     hideCoachHint();
     celebrate(fact.move);
-    const praise = randomPraise(assisted ? "assisted" : "clean");
+    const praise = praiseForCorrectAnswer(assisted);
     state.reward.praise = praise.meaning ? praise : null;
     speak(praise.speak);
     showStreakMoment(fact, () => {
@@ -2507,10 +3289,16 @@ function hideCoachHint() {
 function startChampionshipTimer() {
   const championship = state.activeChampionship;
   if (!championship) return;
+  resumeChampionshipTimer(championship.secondsPerQuestion * 1000);
+}
+
+function resumeChampionshipTimer(remainingMs) {
+  if (!state.activeChampionship) return;
+  const safeRemainingMs = Math.max(1, Number(remainingMs) || 1);
   const now = Date.now();
   state.championshipRun.questionStartedAt = now;
-  state.championshipRun.deadline = now + championship.secondsPerQuestion * 1000;
-  state.championshipRun.timeLeft = championship.secondsPerQuestion;
+  state.championshipRun.deadline = now + safeRemainingMs;
+  state.championshipRun.timeLeft = Math.ceil(safeRemainingMs / 1000);
   updateChampionshipTimer();
   state.championshipRun.timer = window.setInterval(updateChampionshipTimer, 200);
 }
@@ -2692,7 +3480,9 @@ function showStreakCelebration(onDone) {
   }
   playStreakSound();
   tap([24, 32, 24]);
-  speak(copy.speak);
+  if (!state.reward.praise?.meaning) {
+    speak(copy.speak);
+  }
   window.clearTimeout(state.streakFx.timer);
   state.streakFx.timer = window.setTimeout(() => {
     if (els.streakDialog.open) {
@@ -2729,7 +3519,9 @@ function streakCopy(streak) {
 function showMusicReward(onDone) {
   const video = pickRewardVideo("music");
   tap([18, 28, 18, 28]);
-  speak("שיר רודה");
+  if (!state.reward.praise?.meaning) {
+    speak("שיר רודה");
+  }
   showVideoReward(video, `שיר רודה · ${video.title}`, onDone);
 }
 
@@ -2961,12 +3753,17 @@ function finishSession() {
   state.storage.sessions += 1;
   const accuracy = state.attempts === 0 ? 0 : Math.round((state.correct / state.attempts) * 100);
   const progression = resolveCordProgression(state.sessionStartXp, accuracy);
+  const instrumentProgression = resolveFastInstrumentProgression(state.selectedTrack, accuracy);
   state.storage.xp = progression.xp;
   state.storage.cordStamps = progression.stamps;
+  if (instrumentProgression) {
+    state.storage.fastInstrumentStamps = instrumentProgression.stamps;
+  }
   const unlockedSkin = progression.promoted
     ? newlyUnlockedTeacherSkin(state.sessionStartXp, state.storage.xp)
     : null;
   if (unlockedSkin) {
+    unlockTeacherSkin(unlockedSkin.id);
     state.storage.lastSkinPromptXp = unlockedSkin.unlockXp;
   }
   saveStorage();
@@ -2974,21 +3771,32 @@ function finishSession() {
   const cord = getCord();
   els.finishTitle.textContent = progression.promoted
     ? "עלית חגורה!"
-    : progression.successful
-      ? "חותמת חדשה!"
-      : "רודה נסגרה";
-  els.finishCord.textContent = "✦";
-  els.finishCord.style.color = cordColor(cord);
+    : instrumentProgression?.unlocked.length
+      ? "כלי נגינה חדש!"
+      : progression.successful
+        ? "חותמת חדשה!"
+        : "רודה נסגרה";
+  els.finishCord.textContent =
+    instrumentProgression?.unlocked.length && !progression.promoted ? "♪" : "✦";
+  els.finishCord.style.color = instrumentProgression?.unlocked.length
+    ? CORD_PALETTE.yellow
+    : cordColor(cord);
   els.accuracyLabel.textContent = `${accuracy}%`;
+  els.finishSecondStatLabel.textContent = "רצף";
   els.finishStreakLabel.textContent = String(state.bestSessionStreak);
-  els.finishXpLabel.textContent = stampProgressLabel();
-  renderNextList(progression);
+  els.finishXpLabel.textContent = instrumentProgression
+    ? `${instrumentProgression.stamps}/${FAST_INSTRUMENT_MAX_STAMPS}`
+    : stampProgressLabel();
+  renderNextList(progression, instrumentProgression);
   showScreen("finish");
   burst(42);
   playFinish();
-  speak(`סיימת רודה. דיוק ${accuracy} אחוז`);
+  const instrumentAnnouncement = instrumentProgression?.unlocked.length
+    ? `. פתחת את ${fastInstrumentNames(instrumentProgression.unlocked)}`
+    : "";
+  speak(`סיימת רודה. דיוק ${accuracy} אחוז${instrumentAnnouncement}`);
   if (unlockedSkin) {
-    window.setTimeout(() => showSkinDialog("rank"), 700);
+    window.setTimeout(() => showSkinDialog("rank", unlockedSkin.id), 700);
   }
 }
 
@@ -3020,6 +3828,7 @@ function finishChampionship() {
   stats.lastTimeouts = state.championshipRun.timeouts;
   const unlockedSkin = progression.promoted ? newlyUnlockedTeacherSkin(oldXp, state.storage.xp) : null;
   if (unlockedSkin) {
+    unlockTeacherSkin(unlockedSkin.id);
     state.storage.lastSkinPromptXp = unlockedSkin.unlockXp;
   }
   saveStorage();
@@ -3044,7 +3853,7 @@ function finishChampionship() {
   els.scorePill.hidden = true;
   els.coachRow.hidden = false;
   if (unlockedSkin) {
-    window.setTimeout(() => showSkinDialog("rank"), 700);
+    window.setTimeout(() => showSkinDialog("rank", unlockedSkin.id), 700);
   }
 }
 
@@ -3081,7 +3890,18 @@ function progressionResultText(progression) {
   return `צריך מעל ${progression.requiredAccuracy}% לעלייה`;
 }
 
-function renderNextList(progression = null) {
+function instrumentProgressionResultText(progression) {
+  if (!progression) return "";
+  if (progression.unlocked.length) {
+    return `${progression.unlocked.length > 1 ? "נפתחו" : "נפתח"}: ${fastInstrumentNames(progression.unlocked)}`;
+  }
+  if (progression.completed) return "כל אוסף הכלים הושלם";
+  if (!progression.successful) return `צריך מעל ${CORD_PROMOTION_ACCURACY}% לחותמת`;
+  const nextName = fastInstrumentNames(progression.next);
+  return `חותמת ${progression.stamps}/${FAST_INSTRUMENT_MAX_STAMPS} · הבא: ${nextName}`;
+}
+
+function renderNextList(progression = null, instrumentProgression = null) {
   els.nextList.innerHTML = "";
   if (progression) {
     const chip = document.createElement("div");
@@ -3090,6 +3910,17 @@ function renderNextList(progression = null) {
     label.textContent = "חגורה";
     const value = document.createElement("strong");
     value.textContent = progressionResultText(progression);
+    chip.append(label, value);
+    els.nextList.append(chip);
+  }
+
+  if (instrumentProgression) {
+    const chip = document.createElement("div");
+    chip.className = "next-chip instrument-result-chip";
+    const label = document.createElement("span");
+    label.textContent = "כלי נגינה";
+    const value = document.createElement("strong");
+    value.textContent = instrumentProgressionResultText(instrumentProgression);
     chip.append(label, value);
     els.nextList.append(chip);
   }
@@ -3142,19 +3973,35 @@ function nextPracticeTipsForMode(mode) {
 }
 
 function randomPraise(kind = "clean") {
-  const pool = (kind === "assisted" ? ASSISTED_PRAISE : CLEAN_PRAISE).map(normalizePraise);
+  const source =
+    kind === "portuguese"
+      ? PORTUGUESE_PRAISE
+      : kind === "assisted"
+        ? ASSISTED_PRAISE
+        : CLEAN_PRAISE;
+  const pool = source.map(normalizePraise);
   const history = state.praiseHistory[kind] || [];
   const fresh = pool.filter((phrase) => !history.includes(phrase.key));
   const lastPhrase = history[history.length - 1];
   const candidates = fresh.length ? fresh : pool.filter((phrase) => phrase.key !== lastPhrase);
   const chosen = candidates[Math.floor(Math.random() * candidates.length)] || pool[0];
-  const maxHistory = Math.min(PRAISE_REPEAT_WINDOW, Math.max(1, pool.length - 1));
+  const maxHistory =
+    kind === "portuguese"
+      ? Math.max(1, pool.length - 1)
+      : Math.min(PRAISE_REPEAT_WINDOW, Math.max(1, pool.length - 1));
 
   history.push(chosen.key);
   while (history.length > maxHistory) history.shift();
   state.praiseHistory[kind] = history;
 
   return chosen;
+}
+
+function praiseForCorrectAnswer(assisted = false) {
+  if (!state.activeChampionship && state.selectedTrack === "regular") {
+    return randomPraise("portuguese");
+  }
+  return randomPraise(assisted ? "assisted" : "clean");
 }
 
 function normalizePraise(entry) {
@@ -3675,6 +4522,14 @@ function drawFighter(ctx, width, height, name, rawT, now, skin = activeSkin()) {
   const scale = Math.min(width, height) / 250;
   const pose = poseForMove(name, rawT, now);
 
+  if (hasFastInstrument("atabaque")) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(scale, scale);
+    drawAtabaque(ctx, 92, 82);
+    ctx.restore();
+  }
+
   ctx.save();
   ctx.translate(cx + pose.offset.x * scale, cy + pose.offset.y * scale);
   ctx.scale(scale, scale);
@@ -3700,8 +4555,211 @@ function drawFighter(ctx, width, height, name, rawT, now, skin = activeSkin()) {
   drawHand(ctx, pose.rHand, skin);
   drawCord(ctx, pose);
   drawHead(ctx, pose.head, skin);
+  drawHeldInstrument(ctx, pose, activeHeldInstrument(now));
 
   ctx.restore();
+}
+
+function hasFastInstrument(id, stamps = fastInstrumentStampCount()) {
+  return FAST_INSTRUMENTS.some((instrument) => instrument.id === id && instrument.stamps <= stamps);
+}
+
+function activeHeldInstrument(now) {
+  const handheld = unlockedFastInstruments().filter((instrument) => instrument.placement === "hand");
+  if (!handheld.length) return null;
+  const selectedId = normalizeSelectedFastInstrument(
+    state.storage.selectedFastInstrument,
+    fastInstrumentStampCount(),
+  );
+  if (selectedId !== "auto") {
+    return handheld.find((instrument) => instrument.id === selectedId) || null;
+  }
+  return handheld[Math.floor(now / 3600) % handheld.length];
+}
+
+function drawAtabaque(ctx, x, floorY) {
+  ctx.save();
+  ctx.translate(x, floorY);
+
+  ctx.fillStyle = "rgba(0, 0, 0, 0.32)";
+  ctx.beginPath();
+  ctx.ellipse(0, 4, 28, 8, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  const body = ctx.createLinearGradient(-22, 0, 22, 0);
+  body.addColorStop(0, "#5c301d");
+  body.addColorStop(0.5, "#a85f32");
+  body.addColorStop(1, "#5c301d");
+  ctx.fillStyle = body;
+  ctx.beginPath();
+  ctx.moveTo(-22, -58);
+  ctx.quadraticCurveTo(-25, -27, -17, 0);
+  ctx.quadraticCurveTo(0, 9, 17, 0);
+  ctx.quadraticCurveTo(25, -27, 22, -58);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.strokeStyle = "#e4b555";
+  ctx.lineWidth = 4;
+  [-49, -30, -10].forEach((y) => {
+    ctx.beginPath();
+    ctx.ellipse(0, y, 21 - (y + 49) * 0.05, 5, 0, 0, Math.PI * 2);
+    ctx.stroke();
+  });
+
+  ctx.fillStyle = "#e1ba78";
+  ctx.beginPath();
+  ctx.ellipse(0, -59, 24, 8, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "#4b291a";
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawHeldInstrument(ctx, pose, instrument) {
+  if (!instrument) return;
+  const hand = pose.rHand;
+  const side = hand.x >= pose.chest.x ? 1 : -1;
+  ctx.save();
+  ctx.translate(hand.x, hand.y);
+
+  if (instrument.id === "agogo") {
+    drawAgogo(ctx, side);
+  } else if (instrument.id === "cuia") {
+    drawCuia(ctx, side);
+  } else if (instrument.id === "pandeiro") {
+    drawPandeiro(ctx);
+  } else if (instrument.id.startsWith("berimbau-")) {
+    drawBerimbau(ctx, instrument.id, side);
+  }
+  ctx.restore();
+}
+
+function drawAgogo(ctx, side) {
+  ctx.scale(side, 1);
+  ctx.rotate(-0.18);
+  ctx.strokeStyle = "#f5c24b";
+  ctx.lineWidth = 4;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(-2, 5);
+  ctx.quadraticCurveTo(8, -8, 8, -25);
+  ctx.stroke();
+
+  [[-5, -15, 8], [10, -25, 10]].forEach(([x, y, size]) => {
+    ctx.fillStyle = "#d99b2b";
+    ctx.beginPath();
+    ctx.moveTo(x - size * 0.48, y - size * 0.7);
+    ctx.lineTo(x + size * 0.48, y - size * 0.7);
+    ctx.lineTo(x + size * 0.72, y + size * 0.7);
+    ctx.lineTo(x - size * 0.72, y + size * 0.7);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = "#fff0a8";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  });
+
+  ctx.strokeStyle = "#fff9ee";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(3, 5);
+  ctx.lineTo(22, -6);
+  ctx.stroke();
+}
+
+function drawCuia(ctx, side) {
+  ctx.scale(side, 1);
+  ctx.rotate(-0.12);
+  const body = ctx.createLinearGradient(-17, 0, 17, 0);
+  body.addColorStop(0, "#8a4f24");
+  body.addColorStop(0.5, "#d8953f");
+  body.addColorStop(1, "#75401f");
+  ctx.fillStyle = body;
+  ctx.beginPath();
+  ctx.moveTo(-17, -20);
+  ctx.quadraticCurveTo(-15, 2, 0, 10);
+  ctx.quadraticCurveTo(15, 2, 17, -20);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = "#4a2818";
+  ctx.beginPath();
+  ctx.ellipse(0, -20, 18, 6, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "#f0bd67";
+  ctx.lineWidth = 2.5;
+  ctx.stroke();
+
+  ctx.strokeStyle = "rgba(255, 249, 238, 0.55)";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(0, -2, 9, 0.18, Math.PI - 0.18);
+  ctx.stroke();
+}
+
+function drawPandeiro(ctx) {
+  ctx.rotate(-0.22);
+  ctx.fillStyle = "rgba(255, 249, 238, 0.92)";
+  ctx.strokeStyle = "#8a5a35";
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.arc(0, -13, 18, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = "#f5c24b";
+  for (let i = 0; i < 6; i += 1) {
+    const angle = (Math.PI * 2 * i) / 6;
+    ctx.beginPath();
+    ctx.arc(Math.cos(angle) * 18, -13 + Math.sin(angle) * 18, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawBerimbau(ctx, id, side) {
+  ctx.scale(side, 1);
+  const config = {
+    "berimbau-viola": { gourd: 10, color: "#f18345", bend: 24 },
+    "berimbau-medio": { gourd: 14, color: "#f5c24b", bend: 28 },
+    "berimbau-gunga": { gourd: 18, color: "#8a5a35", bend: 32 },
+  }[id];
+  if (!config) return;
+
+  ctx.strokeStyle = "#7a4b2c";
+  ctx.lineWidth = 5;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(0, 48);
+  ctx.quadraticCurveTo(config.bend, -10, 2, -76);
+  ctx.stroke();
+
+  ctx.strokeStyle = "#dce7e9";
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(0, 46);
+  ctx.lineTo(2, -74);
+  ctx.stroke();
+
+  ctx.fillStyle = config.color;
+  ctx.beginPath();
+  ctx.ellipse(9, 25, config.gourd, config.gourd * 1.16, -0.22, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "#4b291a";
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  ctx.strokeStyle = "#fff9ee";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(5, 2);
+  ctx.lineTo(28, -12);
+  ctx.stroke();
+  ctx.fillStyle = "#47b56c";
+  ctx.beginPath();
+  ctx.arc(24, -7, 5, 0, Math.PI * 2);
+  ctx.fill();
 }
 
 function poseForMove(name, rawT, now) {
@@ -4186,9 +5244,64 @@ function drawBurst() {
 
 function registerServiceWorker() {
   if (!("serviceWorker" in navigator)) return;
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./service-worker.js?v=48").catch(() => {});
+  if (window.AndroidUpdates) {
+    navigator.serviceWorker
+      .getRegistrations()
+      .then((registrations) => {
+        registrations.forEach((registration) => registration.unregister());
+      })
+      .catch(() => {});
+    if ("caches" in window) {
+      caches
+        .keys()
+        .then((keys) => keys.forEach((key) => caches.delete(key)))
+        .catch(() => {});
+    }
+    return;
+  }
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (!state.updateReloadPending) return;
+    state.updateReloadPending = false;
+    window.location.reload();
   });
+
+  window.addEventListener("load", async () => {
+    try {
+      const registration = await navigator.serviceWorker.register("./service-worker.js?v=53");
+      state.serviceWorkerRegistration = registration;
+      watchServiceWorkerRegistration(registration);
+      await registration.update();
+
+      window.setInterval(() => registration.update().catch(() => {}), UPDATE_CHECK_INTERVAL_MS);
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") {
+          registration.update().catch(() => {});
+        }
+      });
+    } catch {
+      // Offline play continues with the currently installed version.
+    }
+  });
+}
+
+function watchServiceWorkerRegistration(registration) {
+  if (registration.waiting && navigator.serviceWorker.controller) {
+    markWebUpdateAvailable(registration.waiting);
+  }
+  registration.addEventListener("updatefound", () => {
+    const installingWorker = registration.installing;
+    if (!installingWorker) return;
+    installingWorker.addEventListener("statechange", () => {
+      if (installingWorker.state === "installed" && navigator.serviceWorker.controller) {
+        markWebUpdateAvailable(registration.waiting || installingWorker);
+      }
+    });
+  });
+}
+
+function markWebUpdateAvailable(worker) {
+  state.waitingServiceWorker = worker;
+  revealUpdateButton();
 }
 
 async function loadRewardLibrary() {

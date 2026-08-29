@@ -1,11 +1,11 @@
-const CACHE_NAME = "darmon-capoeira-v48";
+const CACHE_NAME = "darmon-capoeira-v53";
 const APP_SHELL = [
   "./",
   "./index.html",
-  "./styles.css?v=48",
-  "./app.js?v=48",
+  "./styles.css?v=53",
+  "./app.js?v=53",
   "./privacy-policy.html",
-  "./manifest.webmanifest?v=48",
+  "./manifest.webmanifest?v=53",
   "./assets/abada-reward-videos.json",
   "./assets/icon.svg",
   "./assets/icon-192.png",
@@ -14,7 +14,12 @@ const APP_SHELL = [
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));
-  self.skipWaiting();
+});
+
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener("activate", (event) => {

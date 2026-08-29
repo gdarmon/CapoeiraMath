@@ -2,6 +2,10 @@ plugins {
     id "com.android.application"
 }
 
+dependencies {
+    implementation "com.google.android.play:app-update:2.1.0"
+}
+
 def versionProps = new Properties()
 file("../../version.properties").withInputStream { versionProps.load(it) }
 
