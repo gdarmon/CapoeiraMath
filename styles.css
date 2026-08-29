@@ -1788,6 +1788,8 @@ h2 {
   position: relative;
   display: grid;
   gap: 12px;
+  max-height: min(88vh, 760px);
+  overflow-y: auto;
   padding: 22px 16px 16px;
   border-radius: 12px;
   background:
@@ -1812,7 +1814,7 @@ h2 {
 }
 
 .skin-choice {
-  min-height: 218px;
+  min-height: 184px;
   padding: 8px;
   border-radius: var(--radius);
   border: 2px solid rgba(255, 249, 238, 0.13);
@@ -1833,10 +1835,14 @@ h2 {
     #221f1c;
 }
 
+.skin-choice:last-child:nth-child(3n + 1) {
+  grid-column: 2;
+}
+
 .skin-preview {
   width: 100%;
-  max-width: 132px;
-  aspect-ratio: 4 / 5;
+  max-width: 118px;
+  aspect-ratio: 9 / 8;
   display: block;
 }
 
