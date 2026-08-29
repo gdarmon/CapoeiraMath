@@ -4,7 +4,7 @@ const ANSWER_OPTION_COUNT = 6;
 const REWARD_SECONDS = 30;
 const STORAGE_KEY = "darmonCapoeira:v1";
 const STORAGE_BACKUP_KEY = "darmonCapoeira:progress-backup:v1";
-const STORAGE_SCHEMA_VERSION = 2;
+const STORAGE_SCHEMA_VERSION = 3;
 const UPDATE_CHECK_INTERVAL_MS = 30 * 60 * 1000;
 const STREAK_MILESTONES = new Set([3, 5, 8, 10, 12, 15, 18]);
 const PRAISE_REPEAT_WINDOW = 10;
@@ -17,24 +17,26 @@ const CORD_PROMOTION_ACCURACY = 75;
 const CORD_PROMOTION_STAMPS = 2;
 const FAST_INSTRUMENTS = [
   { id: "agogo", name: "אגוגו", stamps: 2, placement: "hand" },
-  { id: "cuia", name: "קויה", stamps: 2, placement: "hand" },
+  { id: "cuia", name: "Cuia", stamps: 2, placement: "hand" },
   { id: "pandeiro", name: "פנדיירו", stamps: 4, placement: "hand" },
   { id: "atabaque", name: "אטאבקי", stamps: 5, placement: "floor" },
   { id: "berimbau-viola", name: "בירמבאו ויולה", stamps: 6, placement: "hand" },
   { id: "berimbau-medio", name: "בירמבאו מדיו", stamps: 7, placement: "hand" },
   { id: "berimbau-gunga", name: "בירמבאו גונגה", stamps: 8, placement: "hand" },
 ];
-const FAST_INSTRUMENT_MAX_STAMPS = Math.max(...FAST_INSTRUMENTS.map((instrument) => instrument.stamps));
+const LEGACY_FAST_INSTRUMENT_MAX_STAMPS = Math.max(
+  ...FAST_INSTRUMENTS.map((instrument) => instrument.stamps),
+);
 const SESSION_TRACKS = {
   regular: {
     label: "רודה מלאה",
-    detail: "18 שאלות · פרסי וידאו",
+    detail: "18 שאלות · פותחים חגורות",
     length: STANDARD_SESSION_LENGTH,
     videos: true,
   },
   fast: {
     label: "מסלול מהיר",
-    detail: "15 שאלות · אוספים כלי נגינה",
+    detail: "15 שאלות · פותחים כלי נגינה",
     length: FAST_SESSION_LENGTH,
     videos: false,
   },
@@ -901,6 +903,7 @@ function bindElements() {
     finishTitle: document.getElementById("finishTitle"),
     accuracyLabel: document.getElementById("accuracyLabel"),
     finishSecondStatLabel: document.getElementById("finishSecondStatLabel"),
+    finishThirdStatLabel: document.getElementById("finishThirdStatLabel"),
     finishStreakLabel: document.getElementById("finishStreakLabel"),
     finishXpLabel: document.getElementById("finishXpLabel"),
     nextList: document.getElementById("nextList"),
@@ -1423,6 +1426,7 @@ function loadStorage() {
     lastSkinPromptXp: 0,
     cordStamps: 0,
     fastInstrumentStamps: 0,
+    fastInstrumentProgress: emptyFastInstrumentProgress(),
     selectedFastInstrument: "auto",
     championships: {},
     facts: {},
@@ -1467,14 +1471,13 @@ function loadStorage() {
   merged.longLayout = normalizeLongLayout(merged.longLayout);
   merged.lastSkinPromptXp = Number(merged.lastSkinPromptXp) || 0;
   merged.cordStamps = Math.max(0, Number(merged.cordStamps) || 0);
-  merged.fastInstrumentStamps = clamp(
-    Math.floor(Number(merged.fastInstrumentStamps) || 0),
-    0,
-    FAST_INSTRUMENT_MAX_STAMPS,
+  merged.fastInstrumentProgress = normalizeFastInstrumentProgress(
+    parsed.fastInstrumentProgress,
+    parsed.fastInstrumentStamps,
   );
   merged.selectedFastInstrument = normalizeSelectedFastInstrument(
     merged.selectedFastInstrument,
-    merged.fastInstrumentStamps,
+    merged.fastInstrumentProgress,
   );
   return merged;
 }
@@ -1530,6 +1533,23 @@ function mergeProgressCandidates(candidates) {
     0,
     ...candidates.map((candidate) => Number(candidate.fastInstrumentStamps) || 0),
   );
+  const candidateInstrumentProgress = candidates.map((candidate) =>
+    normalizeFastInstrumentProgress(
+      candidate.fastInstrumentProgress,
+      candidate.fastInstrumentStamps,
+    ),
+  );
+  merged.fastInstrumentProgress = Object.fromEntries(
+    FAST_INSTRUMENTS.map((instrument) => [
+      instrument.id,
+      Math.max(
+        0,
+        ...candidateInstrumentProgress.map(
+          (progress) => Number(progress[instrument.id]) || 0,
+        ),
+      ),
+    ]),
+  );
   merged.bestStreak = Math.max(
     0,
     ...candidates.map((candidate) => Number(candidate.bestStreak) || 0),
@@ -1561,14 +1581,14 @@ function mergeProgressCandidates(candidates) {
     FAST_INSTRUMENTS.some(
       (instrument) =>
         instrument.id === merged.selectedFastInstrument &&
-        instrument.stamps <= merged.fastInstrumentStamps,
+        instrumentIsUnlocked(instrument, merged.fastInstrumentProgress),
     );
   if (!selectedInstrumentIsValid) {
     const selectedInstrumentCandidate = byRecency.find((candidate) =>
       FAST_INSTRUMENTS.some(
         (instrument) =>
           instrument.id === candidate.selectedFastInstrument &&
-          instrument.stamps <= merged.fastInstrumentStamps,
+          instrumentIsUnlocked(instrument, merged.fastInstrumentProgress),
       ),
     );
     if (selectedInstrumentCandidate) {
@@ -1594,6 +1614,10 @@ function factMemory(fact) {
 function saveStorage() {
   state.storage.schemaVersion = STORAGE_SCHEMA_VERSION;
   state.storage.savedAt = Date.now();
+  state.storage.fastInstrumentProgress = normalizeFastInstrumentProgress(
+    state.storage.fastInstrumentProgress,
+    state.storage.fastInstrumentStamps,
+  );
   state.storage.unlockedSkinIds = [
     ...new Set(
       (state.storage.unlockedSkinIds || []).filter((id) =>
@@ -1743,32 +1767,85 @@ function stampProgressLabel(stamps = state.storage.cordStamps, cord = getCord())
   return `${stamps}/${stampsRequiredForCord(cord)}`;
 }
 
-function fastInstrumentStampCount() {
-  return clamp(
-    Math.floor(Number(state.storage.fastInstrumentStamps) || 0),
+function emptyFastInstrumentProgress() {
+  return Object.fromEntries(FAST_INSTRUMENTS.map((instrument) => [instrument.id, 0]));
+}
+
+function normalizeFastInstrumentProgress(progress, legacyStamps = 0) {
+  const normalized = emptyFastInstrumentProgress();
+  const hasIndependentProgress =
+    progress &&
+    typeof progress === "object" &&
+    !Array.isArray(progress) &&
+    FAST_INSTRUMENTS.some((instrument) =>
+      Object.prototype.hasOwnProperty.call(progress, instrument.id),
+    );
+
+  if (hasIndependentProgress) {
+    FAST_INSTRUMENTS.forEach((instrument) => {
+      normalized[instrument.id] = clamp(
+        Math.floor(Number(progress[instrument.id]) || 0),
+        0,
+        instrument.stamps,
+      );
+    });
+    return normalized;
+  }
+
+  const legacy = clamp(
+    Math.floor(Number(legacyStamps) || 0),
     0,
-    FAST_INSTRUMENT_MAX_STAMPS,
+    LEGACY_FAST_INSTRUMENT_MAX_STAMPS,
+  );
+  const completed = FAST_INSTRUMENTS.filter((instrument) => instrument.stamps <= legacy);
+  completed.forEach((instrument) => {
+    normalized[instrument.id] = instrument.stamps;
+  });
+
+  const next = FAST_INSTRUMENTS.find(
+    (instrument) => normalized[instrument.id] < instrument.stamps,
+  );
+  if (next) {
+    const previousMilestone = completed.length
+      ? Math.max(...completed.map((instrument) => instrument.stamps))
+      : 0;
+    normalized[next.id] = Math.min(next.stamps, Math.max(0, legacy - previousMilestone));
+  }
+  return normalized;
+}
+
+function fastInstrumentProgressMap() {
+  return normalizeFastInstrumentProgress(
+    state.storage.fastInstrumentProgress,
+    state.storage.fastInstrumentStamps,
   );
 }
 
-function normalizeSelectedFastInstrument(id, stamps = 0) {
+function fastInstrumentStampCount(id, progress = fastInstrumentProgressMap()) {
+  const instrument = FAST_INSTRUMENTS.find((item) => item.id === id);
+  if (!instrument) return 0;
+  return clamp(Math.floor(Number(progress[id]) || 0), 0, instrument.stamps);
+}
+
+function instrumentIsUnlocked(instrument, progress) {
+  return fastInstrumentStampCount(instrument.id, progress) >= instrument.stamps;
+}
+
+function normalizeSelectedFastInstrument(id, progress = emptyFastInstrumentProgress()) {
   if (id === "auto") return "auto";
   return FAST_INSTRUMENTS.some(
-    (instrument) => instrument.id === id && instrument.stamps <= stamps,
+    (instrument) => instrument.id === id && instrumentIsUnlocked(instrument, progress),
   )
     ? id
     : "auto";
 }
 
-function unlockedFastInstruments(stamps = fastInstrumentStampCount()) {
-  return FAST_INSTRUMENTS.filter((instrument) => instrument.stamps <= stamps);
+function unlockedFastInstruments(progress = fastInstrumentProgressMap()) {
+  return FAST_INSTRUMENTS.filter((instrument) => instrumentIsUnlocked(instrument, progress));
 }
 
-function nextFastInstrumentMilestone(stamps = fastInstrumentStampCount()) {
-  const nextStamp = FAST_INSTRUMENTS.find((instrument) => instrument.stamps > stamps)?.stamps;
-  return nextStamp
-    ? FAST_INSTRUMENTS.filter((instrument) => instrument.stamps === nextStamp)
-    : [];
+function nextFastInstrument(progress = fastInstrumentProgressMap()) {
+  return FAST_INSTRUMENTS.find((instrument) => !instrumentIsUnlocked(instrument, progress)) || null;
 }
 
 function fastInstrumentNames(instruments) {
@@ -1778,26 +1855,33 @@ function fastInstrumentNames(instruments) {
 function resolveFastInstrumentProgression(
   track,
   accuracy,
-  currentStamps = state.storage.fastInstrumentStamps,
+  currentProgress = state.storage.fastInstrumentProgress,
 ) {
   if (normalizeTrack(track) !== "fast") return null;
-  const before = clamp(
-    Math.floor(Number(currentStamps) || 0),
-    0,
-    FAST_INSTRUMENT_MAX_STAMPS,
+  const progress = normalizeFastInstrumentProgress(
+    currentProgress,
+    state.storage.fastInstrumentStamps,
   );
+  const instrument = nextFastInstrument(progress);
   const successful = accuracy > CORD_PROMOTION_ACCURACY;
-  const stamps = successful ? Math.min(FAST_INSTRUMENT_MAX_STAMPS, before + 1) : before;
+  const before = instrument ? fastInstrumentStampCount(instrument.id, progress) : 0;
+  const stamps = instrument && successful ? Math.min(instrument.stamps, before + 1) : before;
+  if (instrument) progress[instrument.id] = stamps;
+  const unlocked = instrument && stamps >= instrument.stamps && before < instrument.stamps
+    ? [instrument]
+    : [];
+  const next = nextFastInstrument(progress);
   return {
     successful,
     earned: stamps > before,
+    instrument,
     before,
     stamps,
-    unlocked: FAST_INSTRUMENTS.filter(
-      (instrument) => instrument.stamps > before && instrument.stamps <= stamps,
-    ),
-    next: nextFastInstrumentMilestone(stamps),
-    completed: stamps >= FAST_INSTRUMENT_MAX_STAMPS,
+    requiredStamps: instrument?.stamps || 0,
+    progress,
+    unlocked,
+    next: next ? [next] : [],
+    completed: !next,
   };
 }
 
@@ -2134,17 +2218,19 @@ function renderFastInstrumentPanel() {
   const visible = state.homeStep === "practice" && state.selectedTrack === "fast";
   els.fastInstrumentPanel.hidden = !visible;
 
-  const stamps = fastInstrumentStampCount();
-  const unlocked = unlockedFastInstruments(stamps);
-  const next = nextFastInstrumentMilestone(stamps);
+  const progress = fastInstrumentProgressMap();
+  const unlocked = unlockedFastInstruments(progress);
+  const next = nextFastInstrument(progress);
   const selectedId = normalizeSelectedFastInstrument(
     state.storage.selectedFastInstrument,
-    stamps,
+    progress,
   );
   state.storage.selectedFastInstrument = selectedId;
-  els.fastInstrumentProgress.textContent = `${stamps}/${FAST_INSTRUMENT_MAX_STAMPS} חותמות`;
-  els.fastInstrumentNext.textContent = next.length
-    ? `${fastInstrumentNames(next)} ${next.length > 1 ? "נפתחים" : "נפתח"} ב־${next[0].stamps}`
+  els.fastInstrumentProgress.textContent = next
+    ? `${next.name}: ${fastInstrumentStampCount(next.id, progress)}/${next.stamps} חותמות`
+    : "כל הכלים נפתחו";
+  els.fastInstrumentNext.textContent = next
+    ? `החותמות נאספות עכשיו עבור ${next.name} בלבד`
     : "כל אוסף הכלים הושלם";
   els.fastInstrumentList.innerHTML = "";
 
@@ -2174,7 +2260,7 @@ function renderFastInstrumentPanel() {
           ? "מתחלף"
           : isUnlocked
             ? "נפתח"
-            : `${instrument.stamps} חותמות`;
+            : `${fastInstrumentStampCount(instrument.id, progress)}/${instrument.stamps} חותמות`;
       badge.append(name, milestone);
       badge.addEventListener("click", () => {
         if (!isUnlocked) return;
@@ -2247,6 +2333,7 @@ function showScreen(name) {
   if (name === "home") {
     els.finishTitle.textContent = "רודה נסגרה";
     els.finishSecondStatLabel.textContent = "רצף";
+    els.finishThirdStatLabel.textContent = "חותמות";
     els.streakPill.hidden = false;
     els.scorePill.hidden = true;
     els.timerPill.hidden = true;
@@ -3752,14 +3839,19 @@ function finishSession() {
   }
   state.storage.sessions += 1;
   const accuracy = state.attempts === 0 ? 0 : Math.round((state.correct / state.attempts) * 100);
-  const progression = resolveCordProgression(state.sessionStartXp, accuracy);
+  const fastTrack = state.selectedTrack === "fast";
+  const progression = fastTrack
+    ? null
+    : resolveCordProgression(state.sessionStartXp, accuracy);
   const instrumentProgression = resolveFastInstrumentProgression(state.selectedTrack, accuracy);
-  state.storage.xp = progression.xp;
-  state.storage.cordStamps = progression.stamps;
-  if (instrumentProgression) {
-    state.storage.fastInstrumentStamps = instrumentProgression.stamps;
+  if (progression) {
+    state.storage.xp = progression.xp;
+    state.storage.cordStamps = progression.stamps;
   }
-  const unlockedSkin = progression.promoted
+  if (instrumentProgression) {
+    state.storage.fastInstrumentProgress = instrumentProgression.progress;
+  }
+  const unlockedSkin = progression?.promoted
     ? newlyUnlockedTeacherSkin(state.sessionStartXp, state.storage.xp)
     : null;
   if (unlockedSkin) {
@@ -3769,23 +3861,25 @@ function finishSession() {
   saveStorage();
   hydrateHome();
   const cord = getCord();
-  els.finishTitle.textContent = progression.promoted
+  els.finishTitle.textContent = progression?.promoted
     ? "עלית חגורה!"
     : instrumentProgression?.unlocked.length
       ? "כלי נגינה חדש!"
-      : progression.successful
+      : progression?.successful || instrumentProgression?.earned
         ? "חותמת חדשה!"
         : "רודה נסגרה";
-  els.finishCord.textContent =
-    instrumentProgression?.unlocked.length && !progression.promoted ? "♪" : "✦";
-  els.finishCord.style.color = instrumentProgression?.unlocked.length
+  els.finishCord.textContent = instrumentProgression ? "♪" : "✦";
+  els.finishCord.style.color = instrumentProgression
     ? CORD_PALETTE.yellow
     : cordColor(cord);
   els.accuracyLabel.textContent = `${accuracy}%`;
   els.finishSecondStatLabel.textContent = "רצף";
+  els.finishThirdStatLabel.textContent = "חותמות";
   els.finishStreakLabel.textContent = String(state.bestSessionStreak);
   els.finishXpLabel.textContent = instrumentProgression
-    ? `${instrumentProgression.stamps}/${FAST_INSTRUMENT_MAX_STAMPS}`
+    ? instrumentProgression.instrument
+      ? `${instrumentProgression.stamps}/${instrumentProgression.requiredStamps}`
+      : "הושלם"
     : stampProgressLabel();
   renderNextList(progression, instrumentProgression);
   showScreen("finish");
@@ -3803,18 +3897,14 @@ function finishSession() {
 function finishChampionship() {
   const championship = state.activeChampionship;
   clearChampionshipTimer();
-  const oldXp = state.sessionStartXp;
   const total = state.sessionLength;
   const correct = state.correct;
   const mistakes = total - correct;
   const score = state.championshipRun.score;
   const place = championshipPlace(correct, total, state.championshipRun.timeouts);
   const accuracy = total === 0 ? 0 : Math.round((correct / total) * 100);
-  const progression = resolveCordProgression(oldXp, accuracy);
 
   state.storage.sessions += 1;
-  state.storage.xp = progression.xp;
-  state.storage.cordStamps = progression.stamps;
   const stats = championshipStats(championship.id);
   stats.plays += 1;
   stats.lastOfferedSession = state.storage.sessions;
@@ -3826,23 +3916,19 @@ function finishChampionship() {
   stats.lastCorrect = correct;
   stats.lastScore = score;
   stats.lastTimeouts = state.championshipRun.timeouts;
-  const unlockedSkin = progression.promoted ? newlyUnlockedTeacherSkin(oldXp, state.storage.xp) : null;
-  if (unlockedSkin) {
-    unlockTeacherSkin(unlockedSkin.id);
-    state.storage.lastSkinPromptXp = unlockedSkin.unlockXp;
-  }
   saveStorage();
   hydrateHome();
 
   const cord = getCord();
   els.finishTitle.textContent = `${championship.title} · מקום ${place}`;
   els.finishSecondStatLabel.textContent = "מקום";
+  els.finishThirdStatLabel.textContent = "ניקוד";
   els.finishCord.textContent = place === 1 ? "1" : "✦";
   els.finishCord.style.color = cordColor(cord);
   els.accuracyLabel.textContent = `${accuracy}%`;
   els.finishStreakLabel.textContent = String(place);
-  els.finishXpLabel.textContent = stampProgressLabel();
-  renderChampionshipResult(championship, place, mistakes, progression, score);
+  els.finishXpLabel.textContent = String(score);
+  renderChampionshipResult(championship, place, mistakes, score);
   showScreen("finish");
   burst(place === 1 ? 70 : 42);
   playFinish();
@@ -3852,9 +3938,6 @@ function finishChampionship() {
   els.timerPill.hidden = true;
   els.scorePill.hidden = true;
   els.coachRow.hidden = false;
-  if (unlockedSkin) {
-    window.setTimeout(() => showSkinDialog("rank", unlockedSkin.id), 700);
-  }
 }
 
 function championshipPlace(correct, total, timeouts) {
@@ -3864,13 +3947,12 @@ function championshipPlace(correct, total, timeouts) {
   return Math.max(1, Math.min(50, rawPlace));
 }
 
-function renderChampionshipResult(championship, place, mistakes, progression, score) {
+function renderChampionshipResult(championship, place, mistakes, score) {
   els.nextList.innerHTML = "";
   [
     `${score} נקודות`,
     `${state.correct}/${state.sessionLength} נכונות`,
     `${mistakes} טעויות`,
-    progressionResultText(progression),
     `${championship.secondsPerQuestion} שניות לשאלה`,
   ].forEach((text) => {
     const chip = document.createElement("div");
@@ -3896,9 +3978,11 @@ function instrumentProgressionResultText(progression) {
     return `${progression.unlocked.length > 1 ? "נפתחו" : "נפתח"}: ${fastInstrumentNames(progression.unlocked)}`;
   }
   if (progression.completed) return "כל אוסף הכלים הושלם";
-  if (!progression.successful) return `צריך מעל ${CORD_PROMOTION_ACCURACY}% לחותמת`;
-  const nextName = fastInstrumentNames(progression.next);
-  return `חותמת ${progression.stamps}/${FAST_INSTRUMENT_MAX_STAMPS} · הבא: ${nextName}`;
+  const instrumentName = progression.instrument?.name || fastInstrumentNames(progression.next);
+  if (!progression.successful) {
+    return `${instrumentName}: ${progression.stamps}/${progression.requiredStamps} · צריך מעל ${CORD_PROMOTION_ACCURACY}%`;
+  }
+  return `${instrumentName}: ${progression.stamps}/${progression.requiredStamps} חותמות`;
 }
 
 function renderNextList(progression = null, instrumentProgression = null) {
@@ -4560,16 +4644,21 @@ function drawFighter(ctx, width, height, name, rawT, now, skin = activeSkin()) {
   ctx.restore();
 }
 
-function hasFastInstrument(id, stamps = fastInstrumentStampCount()) {
-  return FAST_INSTRUMENTS.some((instrument) => instrument.id === id && instrument.stamps <= stamps);
+function hasFastInstrument(id, progress = fastInstrumentProgressMap()) {
+  return FAST_INSTRUMENTS.some(
+    (instrument) => instrument.id === id && instrumentIsUnlocked(instrument, progress),
+  );
 }
 
 function activeHeldInstrument(now) {
-  const handheld = unlockedFastInstruments().filter((instrument) => instrument.placement === "hand");
+  const progress = fastInstrumentProgressMap();
+  const handheld = unlockedFastInstruments(progress).filter(
+    (instrument) => instrument.placement === "hand",
+  );
   if (!handheld.length) return null;
   const selectedId = normalizeSelectedFastInstrument(
     state.storage.selectedFastInstrument,
-    fastInstrumentStampCount(),
+    progress,
   );
   if (selectedId !== "auto") {
     return handheld.find((instrument) => instrument.id === selectedId) || null;
@@ -5267,7 +5356,7 @@ function registerServiceWorker() {
 
   window.addEventListener("load", async () => {
     try {
-      const registration = await navigator.serviceWorker.register("./service-worker.js?v=53");
+      const registration = await navigator.serviceWorker.register("./service-worker.js?v=54");
       state.serviceWorkerRegistration = registration;
       watchServiceWorkerRegistration(registration);
       await registration.update();

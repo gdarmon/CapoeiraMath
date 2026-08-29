@@ -8,11 +8,11 @@
       name="description"
       content="Darmon Capoeira - משחק קפוארה קצר לתרגול לוח הכפל, פעולות חשבון, שברים ועשרוניים."
     />
-    <link rel="manifest" href="manifest.webmanifest?v=53" />
+    <link rel="manifest" href="manifest.webmanifest?v=54" />
     <link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="assets/icon-192.png" />
     <title>Darmon Capoeira</title>
-    <link rel="stylesheet" href="styles.css?v=53" />
+    <link rel="stylesheet" href="styles.css?v=54" />
   </head>
   <body>
     <div id="app" class="shell">
@@ -161,11 +161,11 @@
           <div class="track-grid" id="trackGrid" aria-label="בחירת מסלול" hidden>
             <button class="track-card selected" type="button" data-track="regular">
               <strong>רודה מלאה</strong>
-              <span>18 שאלות · פרסי וידאו</span>
+              <span>18 שאלות · פותחים חגורות</span>
             </button>
             <button class="track-card" type="button" data-track="fast">
               <strong>מסלול מהיר</strong>
-              <span>15 שאלות · אוספים כלי נגינה</span>
+              <span>15 שאלות · פותחים כלי נגינה</span>
             </button>
           </div>
 
@@ -173,9 +173,9 @@
             <div class="fast-instrument-head">
               <div>
                 <span class="mini-label">אוסף המסלול המהיר</span>
-                <strong id="fastInstrumentProgress">0/8 חותמות</strong>
+                <strong id="fastInstrumentProgress">אגוגו: 0/2 חותמות</strong>
               </div>
-              <span id="fastInstrumentNext">אגוגו וקויה נפתחים ב־2</span>
+              <span id="fastInstrumentNext">החותמות נאספות עכשיו עבור אגוגו בלבד</span>
             </div>
             <div class="fast-instrument-list" id="fastInstrumentList"></div>
             <span class="fast-instrument-help">לחצו על כלי פתוח כדי לבחור מה יופיע באנימציה</span>
@@ -429,7 +429,7 @@
               <strong id="finishStreakLabel">0</strong>
             </div>
             <div>
-              <span class="mini-label">חותמות</span>
+              <span class="mini-label" id="finishThirdStatLabel">חותמות</span>
               <strong id="finishXpLabel">0</strong>
             </div>
           </div>
@@ -616,6 +616,6 @@
       </dialog>
     </div>
 
-    <script src="app.js?v=53" defer></script>
+    <script src="app.js?v=54" defer></script>
   </body>
 </html>
