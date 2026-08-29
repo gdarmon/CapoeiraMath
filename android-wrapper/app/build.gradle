@@ -17,12 +17,12 @@ if (keystorePropsFile.exists()) {
 
 android {
     namespace "com.darmon.capoeria"
-    compileSdk 35
+    compileSdk 36
 
     defaultConfig {
         applicationId "com.darmon.capoeria"
         minSdk 24
-        targetSdk 35
+        targetSdk 36
         versionCode versionProps['versionCode'].toInteger()
         versionName versionProps['versionName']
     }
